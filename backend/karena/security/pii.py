@@ -332,7 +332,7 @@ class PIIDetector:
             result = (
                 result[: match.start_position]
                 + masked_value
-                + result[match.end_position:]
+                + result[match.end_position :]
             )
 
         return result

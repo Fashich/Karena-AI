@@ -60,6 +60,7 @@ class HybridRetriever:
         top_k: int | None = None,
     ) -> list[RetrievedDocument]:
         from karena.config import get_settings
+
         settings = get_settings()
         k = top_k or settings.retrieval_top_k
         dense_k = min(k, 50)
