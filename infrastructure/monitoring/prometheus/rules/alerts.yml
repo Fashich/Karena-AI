@@ -1,0 +1,93 @@
+groups:
+  - name: karena_ai_alerts
+    interval: 30s
+    rules:
+      # Backend availability alert
+      - alert: BackendDown
+        expr: up{job="karena-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Karena AI Backend is down"
+          description: "Backend service has been unreachable for more than 1 minute"
+      
+      # High error rate alert
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "More than 5% of requests are failing with 5xx errors"
+      
+      # High latency alert
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High request latency"
+          description: "95th percentile latency is above 2 seconds"
+      
+      # RAG pipeline slow response
+      - alert: RAGPipelineSlow
+        expr: avg( rag_pipeline_duration_seconds ) > 5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RAG pipeline responding slowly"
+          description: "Average RAG pipeline execution time exceeds 5 seconds"
+      
+      # Vector database connection issues
+      - alert: QdrantConnectionIssues
+        expr: qdrant_cluster_status != 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Qdrant vector database issues"
+          description: "Qdrant cluster is not healthy"
+      
+      # Redis memory high
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis is using more than 90% of allocated memory"
+      
+      # Database connections exhausted
+      - alert: DatabaseConnectionsExhausted
+        expr: pg_stat_activity_count / pg_settings_max_connections > 0.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connections nearly exhausted"
+          description: "PostgreSQL connection pool is above 90% capacity"
+      
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "Less than 10% disk space remaining"
+      
+      # Cache hit rate low
+      - alert: CacheHitRateLow
+        expr: rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cache hit rate is low"
+          description: "Cache hit ratio has dropped below 50%"
