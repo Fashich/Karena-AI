@@ -256,8 +256,7 @@ class DemoOrchestrator:
             },
             "execution_summary": {
                 "start_time": datetime.fromtimestamp(session.start_time).isoformat(),
-                "duration_seconds": (session.end_time or time.time())
-                - session.start_time,
+                "duration_seconds": (session.end_time or time.time()) - session.start_time,
                 "total_queries": session.scenario.queries,
                 "executed_queries": len(session.query_results),
             },

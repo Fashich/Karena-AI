@@ -228,9 +228,7 @@ class APIGateway:
 
         state = _rate_limit_store[key]
         elapsed = now - state.last_update
-        state.tokens = min(
-            state.burst_limit, state.tokens + elapsed * state.refill_rate
-        )
+        state.tokens = min(state.burst_limit, state.tokens + elapsed * state.refill_rate)
         state.last_update = now
 
         if state.tokens < 1:
@@ -278,9 +276,7 @@ class APIGateway:
 
         return payload
 
-    def authorize(
-        self, current_user: TokenPayload, required_permission: Permission
-    ) -> None:
+    def authorize(self, current_user: TokenPayload, required_permission: Permission) -> None:
         """Check if user has required permission."""
         if required_permission not in current_user.permissions:
             raise HTTPException(
