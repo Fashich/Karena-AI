@@ -1,20 +1,52 @@
-# Abaikan virtual environment Python
-backend/.venv/
+```
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
+
+# Dependencies
 .venv/
 venv/
-ENV/
-
-# Abaikan dependensi Node/React (jika ada)
 node_modules/
-dist/
-build/
 
-# Abaikan semua folder virtual environment secara menyeluruh
-**/venv/
-**/.venv/
-backend/.venv/
-backend/venv/
+# Logs and temp files
+*.log
+*.tmp
+*.swp
 
-# Abaikan cache python
-**/__pycache__/
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# Coverage reports
+.coverage
+coverage/
+htmlcov/
+
+# Python specific
 *.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Distribution / packaging
+.dist-info/
+*.egg-info/
+*.egg
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.tox/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+```
