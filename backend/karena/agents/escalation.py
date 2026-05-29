@@ -72,9 +72,7 @@ class TicketingIntegration:
         """Create ticket in external system. Override in subclasses."""
         raise NotImplementedError
 
-    async def update_ticket(
-        self, external_id: str, status: str, notes: str
-    ) -> None:
+    async def update_ticket(self, external_id: str, status: str, notes: str) -> None:
         """Update ticket in external system."""
         raise NotImplementedError
 
@@ -319,7 +317,9 @@ class EscalationHandler:
     async def _notify_experts(self, ticket: EscalationTicket) -> None:
         """Send notifications to on-call experts."""
         # Production: integrate with PagerDuty, OpsGenie, Slack
-        print(f"[ESCALATION] Ticket {ticket.id} created with priority {ticket.priority}")
+        print(
+            f"[ESCALATION] Ticket {ticket.id} created with priority {ticket.priority}"
+        )
 
     async def update_status(
         self,

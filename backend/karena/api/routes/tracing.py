@@ -16,7 +16,7 @@ async def list_traces(
     """List recent traces for observability."""
     tracer = get_tracer()
     traces = tracer.get_all_traces(limit=limit)
-    
+
     return {
         "traces": [
             {
@@ -40,10 +40,10 @@ async def get_trace(
     """Get detailed trace information."""
     tracer = get_tracer()
     trace_data = tracer.export_trace(trace_id)
-    
+
     if not trace_data:
         raise HTTPException(status_code=404, detail="Trace not found")
-    
+
     return trace_data
 
 
@@ -55,10 +55,10 @@ async def get_latency_breakdown(
     """Get latency breakdown for a trace."""
     tracer = get_tracer()
     breakdown = tracer.calculate_latency_breakdown(trace_id)
-    
+
     if not breakdown:
         raise HTTPException(status_code=404, detail="Trace not found")
-    
+
     return {
         "trace_id": trace_id,
         "latency_breakdown_ms": breakdown,

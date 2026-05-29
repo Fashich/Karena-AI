@@ -220,13 +220,21 @@ class DemoOrchestrator:
             "confidence_avg": sum(confidences) / len(confidences) if confidences else 0,
             "confidence_min": min(confidences) if confidences else 0,
             "queries_with_sources": sum(1 for r in successful if r.get("sources")),
-            "source_citation_rate": sum(1 for r in successful if r.get("sources")) / len(successful) if successful else 0,
+            "source_citation_rate": (
+                sum(1 for r in successful if r.get("sources")) / len(successful)
+                if successful
+                else 0
+            ),
         }
 
         # Check against success criteria
         criteria = self._current_session.scenario.success_criteria
-        metrics["meets_latency_target"] = metrics["latency_p95_ms"] <= criteria.get("latency_p95_ms", 1000)
-        metrics["meets_confidence_target"] = metrics["confidence_min"] >= criteria.get("min_confidence", 0.7)
+        metrics["meets_latency_target"] = metrics["latency_p95_ms"] <= criteria.get(
+            "latency_p95_ms", 1000
+        )
+        metrics["meets_confidence_target"] = metrics["confidence_min"] >= criteria.get(
+            "min_confidence", 0.7
+        )
 
         self._current_session.metrics = metrics
         return metrics
@@ -248,16 +256,19 @@ class DemoOrchestrator:
             },
             "execution_summary": {
                 "start_time": datetime.fromtimestamp(session.start_time).isoformat(),
-                "duration_seconds": (session.end_time or time.time()) - session.start_time,
+                "duration_seconds": (session.end_time or time.time())
+                - session.start_time,
                 "total_queries": session.scenario.queries,
                 "executed_queries": len(session.query_results),
             },
             "performance_metrics": metrics,
             "success_validation": {
-                "criteria_met": all([
-                    metrics.get("meets_latency_target", False),
-                    metrics.get("meets_confidence_target", False),
-                ]),
+                "criteria_met": all(
+                    [
+                        metrics.get("meets_latency_target", False),
+                        metrics.get("meets_confidence_target", False),
+                    ]
+                ),
                 "expected_outcomes": session.scenario.expected_outcomes,
             },
             "stakeholder_feedback": session.stakeholder_feedback,
