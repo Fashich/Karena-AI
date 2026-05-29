@@ -317,9 +317,7 @@ class ABTestingEngine:
             return []
 
         experiment = self.experiments[experiment_id]
-        metrics_to_analyze = (
-            [metric_name] if metric_name else list(experiment["metrics"].keys())
-        )
+        metrics_to_analyze = [metric_name] if metric_name else list(experiment["metrics"].keys())
 
         results = []
 
@@ -385,12 +383,8 @@ class ABTestingEngine:
         mean_t = sum(treatment_values) / len(treatment_values)
         mean_c = sum(control_values) / len(control_values)
 
-        var_t = sum((x - mean_t) ** 2 for x in treatment_values) / (
-            len(treatment_values) - 1
-        )
-        var_c = sum((x - mean_c) ** 2 for x in control_values) / (
-            len(control_values) - 1
-        )
+        var_t = sum((x - mean_t) ** 2 for x in treatment_values) / (len(treatment_values) - 1)
+        var_c = sum((x - mean_c) ** 2 for x in control_values) / (len(control_values) - 1)
 
         se = ((var_t / len(treatment_values)) + (var_c / len(control_values))) ** 0.5
 
