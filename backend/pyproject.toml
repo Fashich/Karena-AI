@@ -11,3 +11,4 @@ extend-exclude = '''
   | dist
 )/
 '''
+skip-string-normalization = true
