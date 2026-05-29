@@ -4,15 +4,13 @@ Provides comprehensive A/B testing capabilities for evaluating
 feature changes, algorithm modifications, and UI adjustments.
 """
 
+import hashlib
 import random
-import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 from uuid import uuid4
-import json
-import hashlib
 
 
 class ExperimentStatus(str, Enum):

@@ -5,7 +5,6 @@ and behavioral patterns to enable adaptive response generation.
 """
 
 import time
-import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -298,7 +297,7 @@ class UserProfileStore:
             CommunicationPreference.DETAILED: "Provide comprehensive, detailed explanations.",
             CommunicationPreference.TECHNICAL: "Use technical terminology appropriate for experts.",
             CommunicationPreference.NON_TECHNICAL: "Use plain language, avoid jargon.",
-            CommunicationPreference.VISUAL: "Use structured formatting, lists, and clear organization.",
+            CommunicationPreference.VISUAL: "Use structured formatting, lists,\n                 and clear organization.",
         }
 
         expertise_instructions = {
@@ -310,7 +309,9 @@ class UserProfileStore:
 
         instruction = (
             f"\n\nPersonalization for this user:\n"
-            f"- Communication style: {pref_instructions.get(profile.communication_preference, '')}\n"
+            f"- Communication style: {
+                pref_instructions.get(
+                    profile.communication_preference, '')}\n"
             f"- Expertise level: {expertise_instructions.get(profile.expertise_level, '')}\n"
             f"- Preferred response length: ~{profile.preferred_response_length} tokens"
         )

@@ -15,7 +15,7 @@ from karena.rag.vector_store import get_vector_store
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    settings = get_settings()
+    get_settings()  # Initialize settings
     await init_db()
     vector_store = get_vector_store()
     await vector_store.ensure_collection()

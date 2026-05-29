@@ -7,9 +7,8 @@ handoff from AI to human experts with full context preservation.
 import asyncio
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any
 
 
 class EscalationPriority(str, Enum):
@@ -190,7 +189,12 @@ class JiraIntegration(TicketingIntegration):
                             "content": [
                                 {
                                     "type": "text",
-                                    "text": f"Query: {escalation.context.query}\n\nAI Response: {escalation.context.ai_response}\n\nConfidence: {escalation.context.confidence_score}\n\nReason: {escalation.context.reason}",
+                                    "text": (
+                                        f"Query: {escalation.context.query}\n\n"
+                                        f"AI Response: {escalation.context.ai_response}\n\n"
+                                        f"Confidence: {escalation.context.confidence_score}\n\n"
+                                        f"Reason: {escalation.context.reason}"
+                                    ),
                                 }
                             ],
                         }

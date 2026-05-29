@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from fastapi import Depends, HTTPException, Request, security, status
+from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
