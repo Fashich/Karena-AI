@@ -4,8 +4,6 @@ Provides pre-configured demonstration flows, PoC validation checklists,
 and success metric dashboards for Karena AI client presentations.
 """
 
-import asyncio
-import json
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -44,7 +42,7 @@ DEMO_SCENARIOS = {
     "financial_services_compliance": DemoScenario(
         id="fs_compliance_001",
         title="APAC Financial Services Compliance Query",
-        description="Demonstrate compliance-aware knowledge retrieval for Singapore/HK regulatory requirements",
+        description="Demonstrate compliance-aware knowledge retrieval for Singapore/HK regulatory requirements",  # noqa: E501
         persona="Compliance Officer",
         industry="Financial Services",
         queries=[
@@ -66,7 +64,7 @@ DEMO_SCENARIOS = {
     "healthcare_clinical_support": DemoScenario(
         id="hc_clinical_001",
         title="Healthcare Clinical Knowledge Synthesis",
-        description="Secure clinical knowledge retrieval for hospital networks in Australia/Thailand",
+        description="Secure clinical knowledge retrieval for hospital networks in Australia/Thailand",  # noqa: E501
         persona="Knowledge Worker (Clinician)",
         industry="Healthcare",
         queries=[
@@ -283,17 +281,17 @@ class DemoOrchestrator:
 
         if not metrics.get("meets_latency_target", True):
             recommendations.append(
-                "Consider implementing additional caching layers or optimizing vector index for faster retrieval"
+                "Consider implementing additional caching layers or optimizing vector index for faster retrieval"  # noqa: E501
             )
 
         if metrics.get("confidence_min", 1.0) < 0.7:
             recommendations.append(
-                "Review embedding model selection and re-ranking configuration to improve response confidence"
+                "Review embedding model selection and re-ranking configuration to improve response confidence"  # noqa: E501
             )
 
         if metrics.get("source_citation_rate", 1.0) < 0.9:
             recommendations.append(
-                "Ensure all responses include source citations for enterprise trust and auditability"
+                "Ensure all responses include source citations for enterprise trust and auditability"  # noqa: E501
             )
 
         return recommendations

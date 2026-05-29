@@ -12,7 +12,7 @@ SYSTEM_INSTRUCTIONS = """You are Karena AI, an enterprise knowledge intelligence
 FEW_SHOT_EXAMPLES = """
 Example:
 User: What is our data retention policy for APAC customers?
-Assistant: Per [Source: APAC Data Governance Policy], customer records are retained for 7 years post-account closure, with encrypted archival after 24 months of inactivity.
+Assistant: Per [Source: APAC Data Governance Policy], customer records are retained for 7 years post-account closure, with encrypted archival after 24 months of inactivity.  # noqa: E501
 """
 
 
@@ -41,7 +41,7 @@ class PromptBuilder:
 {question}
 
 ## Instructions
-Provide a synthesized answer with source citations. Include a confidence assessment (high/medium/low) at the end.
+Provide a synthesized answer with source citations. Include a confidence assessment (high/medium/low) at the end.  # noqa: E501
 """
 
     def _compress_context(self, docs: list[RetrievedDocument], max_chars: int) -> str:
