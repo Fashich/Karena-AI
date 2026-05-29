@@ -140,27 +140,27 @@ class AuditLogger:
 
         # Indexes for common queries
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_audit_timestamp 
+            CREATE INDEX IF NOT EXISTS idx_audit_timestamp
             ON audit_events(timestamp)
         """)
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_audit_actor 
+            CREATE INDEX IF NOT EXISTS idx_audit_actor
             ON audit_events(actor_id, actor_type)
         """)
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_audit_event_type 
+            CREATE INDEX IF NOT EXISTS idx_audit_event_type
             ON audit_events(event_type)
         """)
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_audit_tenant 
+            CREATE INDEX IF NOT EXISTS idx_audit_tenant
             ON audit_events(tenant_id)
         """)
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_audit_resource 
+            CREATE INDEX IF NOT EXISTS idx_audit_resource
             ON audit_events(resource_type, resource_id)
         """)
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_audit_session 
+            CREATE INDEX IF NOT EXISTS idx_audit_session
             ON audit_events(session_id)
         """)
 

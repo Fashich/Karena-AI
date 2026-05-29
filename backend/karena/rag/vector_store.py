@@ -9,9 +9,11 @@ from karena.rag.chunking import DocumentChunk
 
 class VectorStoreProtocol(Protocol):
     async def ensure_collection(self) -> None: ...
+
     async def upsert_chunks(
         self, chunks: list[DocumentChunk], vectors: list[list[float]]
     ) -> int: ...
+
     async def dense_search(
         self, query_vector: list[float], *, tenant_id: str, limit: int = 50
     ) -> list[dict[str, Any]]: ...

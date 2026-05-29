@@ -54,8 +54,8 @@ class AgentOrchestrator:
         context_start = prompt.find("## Retrieved Context")
         context_snippet = ""
         if context_start != -1:
-            ctx = prompt[context_start : context_start + 800]
-            lines = [l.strip() for l in ctx.split("\n") if l.strip().startswith("-")]
+            ctx = prompt[context_start:context_start + 800]
+            lines = [line.strip() for line in ctx.split("\n") if line.strip().startswith("-")]
             if lines:
                 context_snippet = lines[0][:200]
 
@@ -64,14 +64,15 @@ class AgentOrchestrator:
                 f"Based on the retrieved knowledge for your question about **{question[:80]}**, "
                 f"here is a synthesized answer:\n\n"
                 f"{context_snippet.replace('- ', '')}\n\n"
-                f"*Configure `LLM_PROVIDER=openai` or `google` with API keys for full generative synthesis. "
-                f"Retrieval and citation pipeline are active.*"
+                f"*Configure `LLM_PROVIDER=openai` or `google` with API keys for full "
+                f"generative synthesis. Retrieval and citation pipeline are active.*"
             )
 
         return (
             f"I received your question: **{question}**\n\n"
             "No matching documents were found in the knowledge base yet. "
-            "Upload documents via the ingestion API (`POST /api/v1/ingest`) to enable retrieval-augmented answers."
+            "Upload documents via the ingestion API (`POST /api/v1/ingest`) to enable "
+            "retrieval-augmented answers."
         )
 
     def classify_intent(self, question: str) -> str:
