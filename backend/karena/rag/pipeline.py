@@ -8,7 +8,7 @@ from karena.cache.tiers import CacheTier
 from karena.config import get_settings
 from karena.memory.store import MemoryStore
 from karena.prompts.builder import PromptBuilder
-from karena.rag.hybrid_retriever import RetrievedDocument, get_hybrid_retriever
+from karena.rag.hybrid_retriever import get_hybrid_retriever
 from karena.rag.reranker import ReRanker
 
 
