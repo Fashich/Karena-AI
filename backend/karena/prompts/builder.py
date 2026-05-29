@@ -58,4 +58,6 @@ Provide a synthesized answer with source citations. Include a confidence assessm
     def _format_history(self, history: list[dict]) -> str:
         if not history:
             return "(New session)"
-        return "\n".join(f"{m['role'].upper()}: {m['content'][:400]}" for m in history[-4:])
+        return "\n".join(
+            f"{m['role'].upper()}: {m['content'][:400]}" for m in history[-4:]
+        )

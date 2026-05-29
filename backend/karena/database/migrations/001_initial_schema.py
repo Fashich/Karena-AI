@@ -23,8 +23,12 @@ def upgrade():
         sa.Column("role", sa.String(50), default="user"),
         sa.Column("department", sa.String(100)),
         sa.Column("is_active", sa.Boolean, default=True),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("email"),
     )
@@ -38,8 +42,12 @@ def upgrade():
         sa.Column("conversation_history_summary", sa.Text()),
         sa.Column("expertise_areas", sa.ARRAY(sa.Text())),
         sa.Column("last_active_at", sa.TIMESTAMP(timezone=True)),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
 
@@ -56,8 +64,12 @@ def upgrade():
         sa.Column("metadata", sa.JSON(), default={}),
         sa.Column("status", sa.String(50), default="pending"),
         sa.Column("indexed_at", sa.TIMESTAMP(timezone=True)),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("content_hash"),
     )
@@ -66,12 +78,16 @@ def upgrade():
     op.create_table(
         "document_chunks",
         sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("document_id", sa.UUID(), sa.ForeignKey("documents.id", ondelete="CASCADE")),
+        sa.Column(
+            "document_id", sa.UUID(), sa.ForeignKey("documents.id", ondelete="CASCADE")
+        ),
         sa.Column("chunk_index", sa.Integer(), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("embedding_vector", sa.Vector(768)),
         sa.Column("metadata", sa.JSON(), default={}),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("document_id", "chunk_index"),
     )
@@ -84,8 +100,12 @@ def upgrade():
         sa.Column("title", sa.String(500)),
         sa.Column("context_summary", sa.Text()),
         sa.Column("is_archived", sa.Boolean, default=False),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
 
@@ -94,7 +114,9 @@ def upgrade():
         "messages",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column(
-            "conversation_id", sa.UUID(), sa.ForeignKey("conversations.id", ondelete="CASCADE")
+            "conversation_id",
+            sa.UUID(),
+            sa.ForeignKey("conversations.id", ondelete="CASCADE"),
         ),
         sa.Column("role", sa.String(50), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
@@ -102,7 +124,9 @@ def upgrade():
         sa.Column("confidence_score", sa.Float()),
         sa.Column("latency_ms", sa.Integer()),
         sa.Column("tokens_used", sa.Integer()),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
 
@@ -117,7 +141,9 @@ def upgrade():
         sa.Column("details", sa.JSON(), default={}),
         sa.Column("ip_address", sa.INET()),
         sa.Column("user_agent", sa.Text()),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
 

@@ -46,7 +46,9 @@ class RAGPipeline:
         cache_key = f"rag:{tenant_id}:{hash(question)}"
         cached = await self.cache.get_response(cache_key)
         if cached:
-            return RAGResponse(**cached, latency_ms=(time.perf_counter() - start) * 1000)
+            return RAGResponse(
+                **cached, latency_ms=(time.perf_counter() - start) * 1000
+            )
 
         session_id = session_id or await self.memory.create_session(user_id, tenant_id)
         history = await self.memory.get_recent_messages(session_id, limit=6)

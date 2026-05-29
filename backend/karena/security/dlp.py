@@ -83,7 +83,9 @@ class DLPEngine:
         if policy_name in self.policies:
             del self.policies[policy_name]
             # Remove compiled patterns
-            keys_to_remove = [k for k in self._compiled_patterns if k.startswith(f"{policy_name}:")]
+            keys_to_remove = [
+                k for k in self._compiled_patterns if k.startswith(f"{policy_name}:")
+            ]
             for key in keys_to_remove:
                 del self._compiled_patterns[key]
             return True
