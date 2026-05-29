@@ -1,9 +1,27 @@
 ```
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.ENV
+.ENV.*
+.venv.bak/
+.venv_*/
+.python-version
+pip-log.txt
+pip-selfcheck.json
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -21,45 +39,34 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
-venv/
-env/
-ENV/
-.venv/
-.env/
+# Environment variables
+.env
+.env.local
+.env.*
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Logs
-*.log
-
-# Environment variables
-.env
-.env.local
-*.env.*
-
-# Coverage
-.coverage
-coverage/
-htmlcov/
-
-# Testing
-.pytest_cache/
-.mypy_cache/
+*.tmp
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Database
+# Logs
+*.log
+
+# Database migrations (if not already tracked)
 *.sqlite3
 *.db
 
-# Secrets
-secrets/
-credentials/
+# Coverage
+coverage/
+htmlcov/
+.coverage*
+
+# Security
+security/
 ```

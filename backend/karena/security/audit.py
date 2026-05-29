@@ -364,7 +364,9 @@ class AuditLogger:
         format: str = "json",
     ) -> str:
         """Export events for compliance reporting."""
-        events = self.query_events(start_time=start_time, end_time=end_time, limit=100000)
+        events = self.query_events(
+            start_time=start_time, end_time=end_time, limit=100000
+        )
 
         if format == "json":
             return json.dumps([e.to_dict() for e in events], indent=2)
@@ -387,7 +389,9 @@ class AuditLogger:
         """Apply retention policy to delete old events."""
         from datetime import timedelta
 
-        cutoff_date = (datetime.now(timezone.utc) - timedelta(days=self.retention_days)).isoformat()
+        cutoff_date = (
+            datetime.now(timezone.utc) - timedelta(days=self.retention_days)
+        ).isoformat()
 
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -428,11 +432,15 @@ class AuditLogger:
         for event in events:
             # Count by type
             type_key = event.event_type.value
-            stats["events_by_type"][type_key] = stats["events_by_type"].get(type_key, 0) + 1
+            stats["events_by_type"][type_key] = (
+                stats["events_by_type"].get(type_key, 0) + 1
+            )
 
             # Count by severity
             sev_key = event.severity.value
-            stats["events_by_severity"][sev_key] = stats["events_by_severity"].get(sev_key, 0) + 1
+            stats["events_by_severity"][sev_key] = (
+                stats["events_by_severity"].get(sev_key, 0) + 1
+            )
 
             # Track unique actors
             stats["unique_actors"].add(event.actor_id)
@@ -502,7 +510,9 @@ class AuditLogger:
 _audit_logger: AuditLogger | None = None
 
 
-def get_audit_logger(db_path: str = ":memory:", retention_days: int = 90) -> AuditLogger:
+def get_audit_logger(
+    db_path: str = ":memory:", retention_days: int = 90
+) -> AuditLogger:
     """Get or create the global audit logger instance."""
     global _audit_logger
     if _audit_logger is None:

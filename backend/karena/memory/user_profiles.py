@@ -151,7 +151,9 @@ class UserProfileStore:
         # Update running averages with exponential moving average
         alpha = 0.1  # Smoothing factor
 
-        profile.avg_query_length = (1 - alpha) * profile.avg_query_length + alpha * query_length
+        profile.avg_query_length = (
+            1 - alpha
+        ) * profile.avg_query_length + alpha * query_length
         profile.preferred_response_length = int(
             (1 - alpha) * profile.preferred_response_length + alpha * response_length
         )
@@ -160,9 +162,13 @@ class UserProfileStore:
         ) * profile.typical_session_duration + alpha * session_duration
 
         if escalated:
-            profile.escalation_rate = (1 - alpha) * profile.escalation_rate + alpha * 1.0
+            profile.escalation_rate = (
+                1 - alpha
+            ) * profile.escalation_rate + alpha * 1.0
         else:
-            profile.escalation_rate = (1 - alpha) * profile.escalation_rate + alpha * 0.0
+            profile.escalation_rate = (
+                1 - alpha
+            ) * profile.escalation_rate + alpha * 0.0
 
         if satisfaction_score is not None:
             if satisfaction_score > 0:
@@ -192,7 +198,9 @@ class UserProfileStore:
         # Find existing domain interest
         for interest in profile.domain_interests:
             if interest.domain == domain:
-                interest.interest_level = min(1.0, interest.interest_level + interest_delta)
+                interest.interest_level = min(
+                    1.0, interest.interest_level + interest_delta
+                )
                 interest.last_interaction = now
                 interest.interaction_count += 1
                 break

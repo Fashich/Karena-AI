@@ -126,7 +126,9 @@ class PIIDetector:
         self.patterns[PIICategory.PHONE] = [
             (
                 "phone_intl",
-                re.compile(r"(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{2,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{4}"),
+                re.compile(
+                    r"(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{2,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{4}"
+                ),
             ),
             ("phone_us", re.compile(r"\b(?:\d{3}[-.\s]?\d{3}[-.\s]?\d{4})\b")),
         ]
@@ -160,11 +162,15 @@ class PIIDetector:
         self.patterns[PIICategory.DATE_OF_BIRTH] = [
             (
                 "dob_iso",
-                re.compile(r"\b(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])\b"),
+                re.compile(
+                    r"\b(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])\b"
+                ),
             ),
             (
                 "dob_us",
-                re.compile(r"\b(?:0[1-9]|1[0-2])/(?:0[1-9]|[12]\d|3[01])/(?:19|20)\d{2}\b"),
+                re.compile(
+                    r"\b(?:0[1-9]|1[0-2])/(?:0[1-9]|[12]\d|3[01])/(?:19|20)\d{2}\b"
+                ),
             ),
         ]
 
@@ -194,7 +200,9 @@ class PIIDetector:
                     matched_text = match.group()
 
                     # Calculate confidence based on pattern specificity
-                    confidence = self._calculate_confidence(category, pattern_name, matched_text)
+                    confidence = self._calculate_confidence(
+                        category, pattern_name, matched_text
+                    )
 
                     if confidence >= min_confidence:
                         pii_match = PIIMatch(
@@ -321,7 +329,11 @@ class PIIDetector:
         result = text
         for match in sorted_matches:
             masked_value = "*" * len(match.value)
-            result = result[: match.start_position] + masked_value + result[match.end_position :]
+            result = (
+                result[: match.start_position]
+                + masked_value
+                + result[match.end_position :]
+            )
 
         return result
 
