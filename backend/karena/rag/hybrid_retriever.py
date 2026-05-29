@@ -5,7 +5,6 @@ from typing import Any
 
 from rank_bm25 import BM25Okapi
 
-from karena.config import get_settings
 from karena.rag.embeddings import get_embedding_service
 from karena.rag.vector_store import get_vector_store
 
@@ -32,7 +31,6 @@ def get_hybrid_retriever() -> "HybridRetriever":
 
 def refresh_bm25_corpus(tenant_id: str) -> None:
     """Rebuild BM25 index from current vector store (after ingestion)."""
-    from karena.config import get_settings
     from karena.rag.vector_store import get_vector_store
 
     store = get_vector_store()
@@ -61,6 +59,7 @@ class HybridRetriever:
         tenant_id: str,
         top_k: int | None = None,
     ) -> list[RetrievedDocument]:
+        from karena.config import get_settings
         settings = get_settings()
         k = top_k or settings.retrieval_top_k
         dense_k = min(k, 50)

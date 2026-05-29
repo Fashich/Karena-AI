@@ -1,7 +1,6 @@
 """Prometheus metrics and request instrumentation."""
 
 from prometheus_client import Counter, Histogram, generate_latest
-from starlette.requests import Request
 from starlette.responses import Response
 
 QUERY_COUNTER = Counter(

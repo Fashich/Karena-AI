@@ -172,7 +172,7 @@ class DLPEngine:
         for detection in sorted_detections:
             start = detection["start"]
             end = detection["end"]
-            matched_text = detection["match"]
+        # matched_text = match.group(0)  # noqa: F841
             # Replace with redaction marker
             redaction_marker = f"[REDACTED-{detection['sensitivity'].upper()}]"
             result = result[:start] + redaction_marker + result[end:]
