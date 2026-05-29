@@ -17,18 +17,18 @@ Assistant: Per [Source: APAC Data Governance Policy], customer records are retai
 
 
 class PromptBuilder:
-  def build(
-    self,
-    *,
-    question: str,
-    context_docs: list[RetrievedDocument],
-    history: list[dict],
-    max_context_chars: int = 12000,
-  ) -> str:
-    context_block = self._compress_context(context_docs, max_context_chars)
-    history_block = self._format_history(history)
+    def build(
+        self,
+        *,
+        question: str,
+        context_docs: list[RetrievedDocument],
+        history: list[dict],
+        max_context_chars: int = 12000,
+    ) -> str:
+        context_block = self._compress_context(context_docs, max_context_chars)
+        history_block = self._format_history(history)
 
-    return f"""{SYSTEM_INSTRUCTIONS}
+        return f"""{SYSTEM_INSTRUCTIONS}
 {FEW_SHOT_EXAMPLES}
 
 ## Conversation History
@@ -44,22 +44,20 @@ class PromptBuilder:
 Provide a synthesized answer with source citations. Include a confidence assessment (high/medium/low) at the end.
 """
 
-  def _compress_context(
-    self, docs: list[RetrievedDocument], max_chars: int
-  ) -> str:
-    lines: list[str] = []
-    total = 0
-    for doc in docs:
-      line = f"- [{doc.source_title}] (score={doc.score:.3f}): {doc.text[:600]}"
-      if total + len(line) > max_chars:
-        break
-      lines.append(line)
-      total += len(line)
-    return "\n".join(lines) if lines else "(No relevant documents retrieved)"
+    def _compress_context(self, docs: list[RetrievedDocument], max_chars: int) -> str:
+        lines: list[str] = []
+        total = 0
+        for doc in docs:
+            line = f"- [{doc.source_title}] (score={doc.score:.3f}): {doc.text[:600]}"
+            if total + len(line) > max_chars:
+                break
+            lines.append(line)
+            total += len(line)
+        return "\n".join(lines) if lines else "(No relevant documents retrieved)"
 
-  def _format_history(self, history: list[dict]) -> str:
-    if not history:
-      return "(New session)"
-    return "\n".join(
-      f"{m['role'].upper()}: {m['content'][:400]}" for m in history[-4:]
-    )
+    def _format_history(self, history: list[dict]) -> str:
+        if not history:
+            return "(New session)"
+        return "\n".join(
+            f"{m['role'].upper()}: {m['content'][:400]}" for m in history[-4:]
+        )

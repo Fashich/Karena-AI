@@ -228,7 +228,9 @@ class APIGateway:
 
         state = _rate_limit_store[key]
         elapsed = now - state.last_update
-        state.tokens = min(state.burst_limit, state.tokens + elapsed * state.refill_rate)
+        state.tokens = min(
+            state.burst_limit, state.tokens + elapsed * state.refill_rate
+        )
         state.last_update = now
 
         if state.tokens < 1:
@@ -237,9 +239,7 @@ class APIGateway:
         state.tokens -= 1
         return True
 
-    async def authenticate(
-        self, request: Request
-    ) -> TokenPayload:
+    async def authenticate(self, request: Request) -> TokenPayload:
         """Authenticate incoming request via Bearer token or API key."""
         auth_header = request.headers.get("Authorization")
 

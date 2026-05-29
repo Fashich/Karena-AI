@@ -12,7 +12,7 @@ from typing import Any
 
 class DataSensitivity(str, Enum):
     """Data sensitivity levels."""
-    
+
     PUBLIC = "public"
     INTERNAL = "internal"
     CONFIDENTIAL = "confidential"
@@ -21,7 +21,7 @@ class DataSensitivity(str, Enum):
 
 class DLPAction(str, Enum):
     """Actions to take when DLP policy is violated."""
-    
+
     ALLOW = "allow"
     REDACT = "redact"
     BLOCK = "block"
@@ -32,7 +32,7 @@ class DLPAction(str, Enum):
 @dataclass
 class DLPPolicy:
     """DLP policy definition."""
-    
+
     name: str
     description: str
     sensitivity_level: DataSensitivity
@@ -45,7 +45,7 @@ class DLPPolicy:
 @dataclass
 class DLPResult:
     """Result of DLP inspection."""
-    
+
     is_compliant: bool
     sensitivity_level: DataSensitivity
     detected_patterns: list[dict[str, Any]] = field(default_factory=list)
@@ -56,15 +56,15 @@ class DLPResult:
 
 class DLPEngine:
     """Data Loss Prevention engine for content inspection and policy enforcement."""
-    
+
     def __init__(self) -> None:
         self.policies: dict[str, DLPPolicy] = {}
         self._compile_patterns()
-    
+
     def _compile_patterns(self) -> None:
         """Pre-compile regex patterns for performance."""
         self._compiled_patterns: dict[str, re.Pattern] = {}
-    
+
     def register_policy(self, policy: DLPPolicy) -> None:
         """Register a DLP policy."""
         self.policies[policy.name] = policy
@@ -74,19 +74,23 @@ class DLPEngine:
                     pattern, re.IGNORECASE
                 )
             except re.error as e:
-                raise ValueError(f"Invalid regex pattern '{pattern}' in policy '{policy.name}': {e}")
-    
+                raise ValueError(
+                    f"Invalid regex pattern '{pattern}' in policy '{policy.name}': {e}"
+                )
+
     def unregister_policy(self, policy_name: str) -> bool:
         """Unregister a DLP policy."""
         if policy_name in self.policies:
             del self.policies[policy_name]
             # Remove compiled patterns
-            keys_to_remove = [k for k in self._compiled_patterns if k.startswith(f"{policy_name}:")]
+            keys_to_remove = [
+                k for k in self._compiled_patterns if k.startswith(f"{policy_name}:")
+            ]
             for key in keys_to_remove:
                 del self._compiled_patterns[key]
             return True
         return False
-    
+
     def inspect(self, content: str, context: dict[str, Any] | None = None) -> DLPResult:
         """Inspect content against all registered DLP policies."""
         context = context or {}
@@ -99,40 +103,42 @@ class DLPEngine:
             DataSensitivity.CONFIDENTIAL,
             DataSensitivity.RESTRICTED,
         ]
-        
+
         for policy_name, policy in self.policies.items():
             if not policy.enabled:
                 continue
-            
+
             # Check for pattern matches
             for pattern_key, compiled_pattern in self._compiled_patterns.items():
                 if not pattern_key.startswith(f"{policy_name}:"):
                     continue
-                
+
                 matches = list(compiled_pattern.finditer(content))
                 if matches:
                     for match in matches:
-                        detected_patterns.append({
-                            "policy": policy_name,
-                            "pattern": pattern_key,
-                            "match": match.group(),
-                            "start": match.start(),
-                            "end": match.end(),
-                            "sensitivity": policy.sensitivity_level.value,
-                        })
-                    
+                        detected_patterns.append(
+                            {
+                                "policy": policy_name,
+                                "pattern": pattern_key,
+                                "match": match.group(),
+                                "start": match.start(),
+                                "end": match.end(),
+                                "sensitivity": policy.sensitivity_level.value,
+                            }
+                        )
+
                     # Update highest sensitivity
                     current_idx = sensitivity_order.index(highest_sensitivity)
                     new_idx = sensitivity_order.index(policy.sensitivity_level)
                     if new_idx > current_idx:
                         highest_sensitivity = policy.sensitivity_level
-                    
+
                     # Check for policy violation
                     if policy.actions and DLPAction.BLOCK in policy.actions:
                         policy_violations.append(
                             f"Policy '{policy_name}' violated: {policy.description}"
                         )
-        
+
         # Determine recommended action
         recommended_action = DLPAction.ALLOW
         if policy_violations:
@@ -142,12 +148,12 @@ class DLPEngine:
                 recommended_action = DLPAction.REDACT
             elif highest_sensitivity == DataSensitivity.CONFIDENTIAL:
                 recommended_action = DLPAction.ALERT
-        
+
         # Generate redacted content if needed
         redacted_content = None
         if recommended_action == DLPAction.REDACT and detected_patterns:
             redacted_content = self._redact_content(content, detected_patterns)
-        
+
         return DLPResult(
             is_compliant=len(policy_violations) == 0,
             sensitivity_level=highest_sensitivity,
@@ -156,12 +162,12 @@ class DLPEngine:
             redacted_content=redacted_content,
             policy_violations=policy_violations,
         )
-    
+
     def _redact_content(self, content: str, detections: list[dict]) -> str:
         """Redact sensitive content based on detections."""
         # Sort by position (reverse order to maintain indices)
         sorted_detections = sorted(detections, key=lambda x: x["start"], reverse=True)
-        
+
         result = content
         for detection in sorted_detections:
             start = detection["start"]
@@ -170,18 +176,18 @@ class DLPEngine:
             # Replace with redaction marker
             redaction_marker = f"[REDACTED-{detection['sensitivity'].upper()}]"
             result = result[:start] + redaction_marker + result[end:]
-        
+
         return result
-    
+
     def classify_content(self, content: str) -> DataSensitivity:
         """Classify content sensitivity level."""
         result = self.inspect(content)
         return result.sensitivity_level
-    
+
     def get_policies(self) -> list[DLPPolicy]:
         """Get all registered policies."""
         return list(self.policies.values())
-    
+
     def get_policy(self, name: str) -> DLPPolicy | None:
         """Get a specific policy by name."""
         return self.policies.get(name)

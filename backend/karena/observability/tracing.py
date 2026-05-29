@@ -70,7 +70,7 @@ class Tracer:
         """Start a new trace with root span."""
         trace_id = str(uuid4())
         span_id = str(uuid4())[:16]
-        
+
         span = Span(
             trace_id=trace_id,
             span_id=span_id,
@@ -79,15 +79,15 @@ class Tracer:
             start_time=time.time(),
             attributes=attributes or {},
         )
-        
+
         trace = Trace(
             trace_id=trace_id,
             root_span=span,
         )
-        
+
         self._traces[trace_id] = trace
         _current_span.set(span)
-        
+
         return span
 
     def start_span(
@@ -99,7 +99,7 @@ class Tracer:
         parent = _current_span.get()
         if not parent:
             return self.start_trace(name, attributes)
-        
+
         span_id = str(uuid4())[:16]
         span = Span(
             trace_id=parent.trace_id,
@@ -109,11 +109,11 @@ class Tracer:
             start_time=time.time(),
             attributes=attributes or {},
         )
-        
+
         trace = self._traces.get(parent.trace_id)
         if trace:
             trace.child_spans.append(span)
-        
+
         _current_span.set(span)
         return span
 
@@ -127,14 +127,16 @@ class Tracer:
         """Record an error in a span."""
         span.status = SpanStatus.ERROR
         span.error_message = str(error)
-        span.events.append({
-            "name": "exception",
-            "timestamp": time.time(),
-            "attributes": {
-                "exception.type": type(error).__name__,
-                "exception.message": str(error),
-            },
-        })
+        span.events.append(
+            {
+                "name": "exception",
+                "timestamp": time.time(),
+                "attributes": {
+                    "exception.type": type(error).__name__,
+                    "exception.message": str(error),
+                },
+            }
+        )
 
     def add_event(
         self,
@@ -143,11 +145,13 @@ class Tracer:
         attributes: dict[str, Any] | None = None,
     ) -> None:
         """Add an event to a span."""
-        span.events.append({
-            "name": name,
-            "timestamp": time.time(),
-            "attributes": attributes or {},
-        })
+        span.events.append(
+            {
+                "name": name,
+                "timestamp": time.time(),
+                "attributes": attributes or {},
+            }
+        )
 
     def get_trace(self, trace_id: str) -> Trace | None:
         """Retrieve a trace by ID."""
@@ -164,7 +168,7 @@ class Tracer:
         trace = self._traces.get(trace_id)
         if not trace:
             return {}
-        
+
         def span_to_dict(span: Span) -> dict:
             return {
                 "trace_id": span.trace_id,
@@ -178,7 +182,7 @@ class Tracer:
                 "events": span.events,
                 "error_message": span.error_message,
             }
-        
+
         return {
             "trace_id": trace.trace_id,
             "service_name": self.service_name,
@@ -195,19 +199,21 @@ class Tracer:
         trace = self._traces.get(trace_id)
         if not trace:
             return {}
-        
+
         breakdown = {}
-        
+
         # Root span total
         if trace.root_span.end_time:
-            breakdown["total"] = (trace.root_span.end_time - trace.root_span.start_time) * 1000
-        
+            breakdown["total"] = (
+                trace.root_span.end_time - trace.root_span.start_time
+            ) * 1000
+
         # Child spans
         for span in trace.child_spans:
             if span.end_time:
                 duration = (span.end_time - span.start_time) * 1000
                 breakdown[span.name] = duration
-        
+
         return breakdown
 
 

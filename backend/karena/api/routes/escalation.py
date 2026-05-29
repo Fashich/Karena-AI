@@ -3,7 +3,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from karena.api.gateway import get_current_user, requires_permission, Permission, TokenPayload
+from karena.api.gateway import (
+    get_current_user,
+    requires_permission,
+    Permission,
+    TokenPayload,
+)
 from karena.api.schemas import SourceCitation
 from karena.agents.escalation import (
     get_escalation_handler,
@@ -77,7 +82,9 @@ async def create_escalation(
 async def list_escalations(
     status: str | None = None,
     limit: int = 50,
-    current_user: TokenPayload = Depends(requires_permission(Permission.VIEW_ANALYTICS)),
+    current_user: TokenPayload = Depends(
+        requires_permission(Permission.VIEW_ANALYTICS)
+    ),
 ):
     """List escalations for tenant (requires analytics permission)."""
     handler = get_escalation_handler()
