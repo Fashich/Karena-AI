@@ -1,61 +1,186 @@
+# Karena AI - Kubernetes Deployment Manifests
+# Production-ready configuration for APAC enterprise deployments
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: karena-ai
+  labels:
+    app: karena-ai
+    environment: production
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: karena-config
+  namespace: karena-ai
+data:
+  DATABASE_URL: "postgresql://karena:secret@postgres-service:5432/karena_db"
+  REDIS_URL: "redis://redis-service:6379/0"
+  QDRANT_URL: "http://qdrant-service:6333"
+  LOG_LEVEL: "INFO"
+  ENABLE_TRACING: "true"
+  ENABLE_METRICS: "true"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: karena-secrets
+  namespace: karena-ai
+type: Opaque
+stringData:
+  API_KEY: "your-secure-api-key"
+  JWT_SECRET: "your-jwt-secret"
+  ENCRYPTION_KEY: "your-encryption-key"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: karena-backend
-  labels:
-    app: karena-ai
-    component: backend
+  namespace: karena-ai
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: karena-ai
-      component: backend
+      app: karena-backend
   template:
     metadata:
       labels:
-        app: karena-ai
-        component: backend
+        app: karena-backend
     spec:
       containers:
-        - name: backend
-          image: karena-ai/backend:latest
-          ports:
-            - containerPort: 8000
-          envFrom:
-            - secretRef:
-                name: karena-secrets
-            - configMapRef:
-                name: karena-config
-          resources:
-            requests:
-              memory: "512Mi"
-              cpu: "250m"
-            limits:
-              memory: "2Gi"
-              cpu: "1000m"
-          livenessProbe:
-            httpGet:
-              path: /api/v1/health
-              port: 8000
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /api/v1/health
-              port: 8000
-            initialDelaySeconds: 10
-            periodSeconds: 5
+      - name: backend
+        image: karena-backend:latest
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: karena-config
+        - secretRef:
+            name: karena-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: karena-frontend
+  namespace: karena-ai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: karena-frontend
+  template:
+    metadata:
+      labels:
+        app: karena-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: karena-frontend:latest
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: karena-ai
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 50Gi
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: karena-backend
+  name: karena-backend-service
+  namespace: karena-ai
 spec:
   selector:
-    app: karena-ai
-    component: backend
+    app: karena-backend
   ports:
-    - port: 80
-      targetPort: 8000
+  - port: 8000
+    targetPort: 8000
   type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: karena-frontend-service
+  namespace: karena-ai
+spec:
+  selector:
+    app: karena-frontend
+  ports:
+  - port: 80
+    targetPort: 80
+  type: LoadBalancer
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: karena-backend-hpa
+  namespace: karena-ai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: karena-backend
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
