@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from karena.api.routes import admin, chat, health, ingest
+from karena.api.routes import admin, chat, escalation, health, ingest
 from karena.config import get_settings
 from karena.memory.store import init_db
 from karena.observability.metrics import setup_metrics
@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
                 "docs": "/docs",
                 "health": f"{prefix}/health",
                 "chat": f"{prefix}/chat",
+                "escalate": f"{prefix}/escalate",
                 "admin": f"{prefix}/admin/stats",
             },
             "frontend": "http://localhost:3000/chat",
@@ -60,6 +61,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router, prefix=prefix, tags=["health"])
     app.include_router(chat.router, prefix=prefix, tags=["chat"])
+    app.include_router(escalation.router, prefix=prefix, tags=["escalation"])
     app.include_router(ingest.router, prefix=prefix, tags=["ingest"])
     app.include_router(admin.router, prefix=prefix, tags=["admin"])
 
