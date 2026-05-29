@@ -275,9 +275,7 @@ class EscalationHandler:
     def __init__(self) -> None:
         self.integrations: dict[str, TicketingIntegration] = {}
 
-    def register_integration(
-        self, name: str, integration: TicketingIntegration
-    ) -> None:
+    def register_integration(self, name: str, integration: TicketingIntegration) -> None:
         """Register a ticketing system integration."""
         self.integrations[name] = integration
 
@@ -303,9 +301,7 @@ class EscalationHandler:
         )
 
         # Create external ticket if integration available
-        integration = self.integrations.get(
-            integration_name or next(iter(self.integrations), None)
-        )
+        integration = self.integrations.get(integration_name or next(iter(self.integrations), None))
         if integration:
             external_id = await integration.create_ticket(ticket)
             if external_id:
@@ -321,9 +317,7 @@ class EscalationHandler:
     async def _notify_experts(self, ticket: EscalationTicket) -> None:
         """Send notifications to on-call experts."""
         # Production: integrate with PagerDuty, OpsGenie, Slack
-        print(
-            f"[ESCALATION] Ticket {ticket.id} created with priority {ticket.priority}"
-        )
+        print(f"[ESCALATION] Ticket {ticket.id} created with priority {ticket.priority}")
 
     async def update_status(
         self,

@@ -204,9 +204,7 @@ class Tracer:
 
         # Root span total
         if trace.root_span.end_time:
-            breakdown["total"] = (
-                trace.root_span.end_time - trace.root_span.start_time
-            ) * 1000
+            breakdown["total"] = (trace.root_span.end_time - trace.root_span.start_time) * 1000
 
         # Child spans
         for span in trace.child_spans:
