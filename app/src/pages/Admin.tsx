@@ -1,0 +1,164 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
+import {
+  Activity,
+  Database,
+  MessageSquare,
+  Upload,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { fetchAdminStats, fetchHealth, uploadDocument, type AdminStats } from '@/lib/api';
+
+export default function Admin() {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [health, setHealth] = useState<Record<string, unknown> | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    try {
+      const [s, h] = await Promise.all([fetchAdminStats(), fetchHealth()]);
+      setStats(s);
+      setHealth(h);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to connect to backend');
+    }
+  };
+
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await uploadDocument(file);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
+      <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+        <Link to="/" className="font-display text-lg font-medium">
+          KARENA AI
+        </Link>
+        <div className="flex gap-3">
+          <Link to="/chat">
+            <Button variant="outline" size="sm">
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Chat
+            </Button>
+          </Link>
+          <Button variant="ghost" size="sm" onClick={load}>
+            Refresh
+          </Button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-5xl p-6 md:p-10">
+        <h1 className="font-display mb-2 text-3xl font-medium">Admin Dashboard</h1>
+        <p className="mb-8 text-white/60">
+          Platform observability, ingestion, and SLA monitoring
+        </p>
+
+        {error && (
+          <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-300">
+            {error}
+          </div>
+        )}
+
+        <div className="mb-8 grid gap-4 md:grid-cols-3">
+          <Card className="border-white/10 bg-white/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-normal text-white/70">
+                <Database className="h-4 w-4" />
+                Vector Index
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-semibold">
+                {stats?.vector_db.points_count ?? '—'}
+              </p>
+              <p className="text-xs text-white/50">indexed chunks</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-white/10 bg-white/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-normal text-white/70">
+                <Activity className="h-4 w-4" />
+                SLA Target
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-semibold">
+                {stats?.sla_targets.uptime ?? '99.9%'}
+              </p>
+              <p className="text-xs text-white/50">
+                p95 &lt; {stats?.sla_targets.p95_latency_ms ?? 1000}ms
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-white/10 bg-white/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-normal text-white/70">
+                LLM Provider
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-semibold capitalize">
+                {stats?.llm_provider ?? '—'}
+              </p>
+              <p className="truncate text-xs text-white/50">
+                {stats?.embedding_model}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="mb-8 border-white/10 bg-white/5">
+          <CardHeader>
+            <CardTitle className="text-base">Document Ingestion</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <label className="flex cursor-pointer items-center gap-3">
+              <Input
+                type="file"
+                accept=".pdf,.docx,.txt,.md"
+                onChange={handleUpload}
+                disabled={uploading}
+                className="border-white/15 bg-white/5"
+              />
+              <Upload className="h-5 w-5 text-white/50" />
+              {uploading ? 'Indexing...' : 'Upload PDF, DOCX, or text'}
+            </label>
+          </CardContent>
+        </Card>
+
+        <Card className="border-white/10 bg-white/5">
+          <CardHeader>
+            <CardTitle className="text-base">System Health</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="overflow-auto rounded-lg bg-black/30 p-4 text-xs text-white/70">
+              {JSON.stringify(health, null, 2)}
+            </pre>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+}

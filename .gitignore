@@ -1,0 +1,20 @@
+# Abaikan virtual environment Python
+backend/.venv/
+.venv/
+venv/
+ENV/
+
+# Abaikan dependensi Node/React (jika ada)
+node_modules/
+dist/
+build/
+
+# Abaikan semua folder virtual environment secara menyeluruh
+**/venv/
+**/.venv/
+backend/.venv/
+backend/venv/
+
+# Abaikan cache python
+**/__pycache__/
+*.pyc

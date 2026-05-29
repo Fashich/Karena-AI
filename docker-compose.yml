@@ -1,0 +1,74 @@
+# Jalankan semua layanan: docker compose up --build
+# Seed knowledge (sekali): docker compose run --rm seed
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.12.5
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./backend/.env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      REDIS_URL: redis://redis:6379/0
+      VECTOR_STORE: qdrant
+      DATABASE_URL: sqlite+aiosqlite:///./data/karena.db
+      API_HOST: 0.0.0.0
+      API_PORT: 8080
+      CORS_ORIGINS: http://localhost,http://localhost:3000,http://127.0.0.1:3000
+    volumes:
+      - ./backend/data:/app/data
+    depends_on:
+      - qdrant
+      - redis
+
+  frontend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  seed:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      VECTOR_STORE: qdrant
+      DATABASE_URL: sqlite+aiosqlite:///./data/karena.db
+    depends_on:
+      - qdrant
+    command: python scripts/seed_knowledge.py
+    profiles:
+      - seed
+
+volumes:
+  qdrant_data:
+  redis_data:
