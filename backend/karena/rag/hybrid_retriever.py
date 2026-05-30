@@ -77,18 +77,16 @@ class HybridRetriever:
         if self._bm25_index and self._bm25_docs:
             tokens = query.lower().split()
             scores = self._bm25_index.get_scores(tokens)
-            ranked = sorted(
-                zip(self._bm25_docs, scores), key=lambda x: x[1], reverse=True
-            )[:dense_k]
+            ranked = sorted(zip(self._bm25_docs, scores), key=lambda x: x[1], reverse=True)[
+                :dense_k
+            ]
             sparse_results = [
                 {**doc, "score": float(score), "channel": "bm25"}
                 for doc, score in ranked
                 if score > 0
             ]
 
-        fused = self._fuse_results(
-            dense_results, sparse_results, settings.hybrid_dense_weight
-        )
+        fused = self._fuse_results(dense_results, sparse_results, settings.hybrid_dense_weight)
         return fused[:k]
 
     def _fuse_results(

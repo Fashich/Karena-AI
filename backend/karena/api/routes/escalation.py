@@ -82,9 +82,7 @@ async def create_escalation(
 async def list_escalations(
     status: str | None = None,
     limit: int = 50,
-    current_user: TokenPayload = Depends(
-        requires_permission(Permission.VIEW_ANALYTICS)
-    ),
+    current_user: TokenPayload = Depends(requires_permission(Permission.VIEW_ANALYTICS)),
 ):
     """List escalations for tenant (requires analytics permission)."""
     handler = get_escalation_handler()

@@ -55,9 +55,7 @@ class AgentOrchestrator:
         context_snippet = ""
         if context_start != -1:
             ctx = prompt[context_start : context_start + 800]
-            lines = [
-                line.strip() for line in ctx.split("\n") if line.strip().startswith("-")
-            ]
+            lines = [line.strip() for line in ctx.split("\n") if line.strip().startswith("-")]
             if lines:
                 context_snippet = lines[0][:200]
 
