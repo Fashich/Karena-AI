@@ -21,6 +21,24 @@ class VectorStoreProtocol(Protocol):
     async def collection_info(self) -> dict: ...
 
 
+class VectorStore:
+    """Synchronous compatibility facade for legacy tests."""
+
+    def __init__(self, client, collection_name: str) -> None:
+        self.client = client
+        self.collection_name = collection_name
+
+    def upsert(self, documents: list[dict]) -> Any:
+        return self.client.upsert(collection_name=self.collection_name, points=documents)
+
+    def search(self, query_vector: list[float], top_k: int = 5) -> list[dict]:
+        return self.client.search(
+            collection_name=self.collection_name,
+            query_vector=query_vector,
+            limit=top_k,
+        )
+
+
 class QdrantVectorStore:
     def __init__(self) -> None:
         from qdrant_client import AsyncQdrantClient

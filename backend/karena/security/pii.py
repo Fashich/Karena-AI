@@ -83,6 +83,11 @@ class PIIDetectionResult:
     recommended_action: str = "allow"
     masked_content: str | None = None
 
+    def __getitem__(self, key: str) -> Any:
+        if key == "pii_types":
+            return [category.value for category in self.categories_found]
+        return getattr(self, key)
+
 
 class PIIDetector:
     """Detects and classifies Personally Identifiable Information."""
@@ -324,6 +329,11 @@ class PIIDetector:
             result = result[: match.start_position] + masked_value + result[match.end_position :]
 
         return result
+
+    def mask_pii(self, text: str) -> str:
+        """Public compatibility wrapper for masking detected PII."""
+        result = self.detect(text)
+        return result.masked_content or text
 
     def get_statistics(self, text: str) -> dict[str, Any]:
         """Get PII statistics for the given text."""

@@ -3,6 +3,8 @@ import { Link } from 'react-router';
 import {
   ArrowUp,
   BookOpen,
+  Download,
+  Headphones,
   Loader2,
   ThumbsDown,
   ThumbsUp,
@@ -11,7 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { sendChat, type ChatResponse, type SourceCitation } from '@/lib/api';
+import {
+  sendChat,
+  createEscalation,
+  submitFeedback,
+  type ChatResponse,
+  type SourceCitation,
+} from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -21,6 +29,9 @@ interface Message {
   sources?: SourceCitation[];
   confidence?: number;
   latency_ms?: number;
+  question?: string;
+  escalationTicket?: string;
+  escalationError?: string;
 }
 
 export default function Chat() {
@@ -29,6 +40,11 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string>();
   const [expandedSource, setExpandedSource] = useState<string | null>(null);
+  const [feedbackByMessage, setFeedbackByMessage] = useState<Record<string, -1 | 1>>(
+    {}
+  );
+  const [escalatingMessage, setEscalatingMessage] = useState<string | null>(null);
+  const [progressStep, setProgressStep] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -48,8 +64,12 @@ export default function Chat() {
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
+    setProgressStep('Classifying intent and tenant context');
 
     try {
+      setTimeout(() => setProgressStep('Retrieving dense and lexical matches'), 250);
+      setTimeout(() => setProgressStep('Re-ranking sources and assembling citations'), 700);
+      setTimeout(() => setProgressStep('Generating grounded answer'), 1100);
       const res: ChatResponse = await sendChat(text, sessionId);
       setSessionId(res.session_id);
       setMessages((prev) => [
@@ -61,6 +81,7 @@ export default function Chat() {
           sources: res.sources,
           confidence: res.confidence,
           latency_ms: res.latency_ms,
+          question: text,
         },
       ]);
       setTimeout(scrollToBottom, 100);
@@ -75,6 +96,7 @@ export default function Chat() {
       ]);
     } finally {
       setLoading(false);
+      setProgressStep(null);
     }
   };
 
@@ -83,6 +105,90 @@ export default function Chat() {
     'Describe the Karena AI reference architecture',
     'When should support queries be escalated?',
   ];
+
+  const handleFeedback = async (messageId: string, rating: -1 | 1) => {
+    if (!sessionId) return;
+    setFeedbackByMessage((prev) => ({ ...prev, [messageId]: rating }));
+    try {
+      await submitFeedback(sessionId, rating);
+    } catch {
+      setFeedbackByMessage((prev) => {
+        const next = { ...prev };
+        delete next[messageId];
+        return next;
+      });
+    }
+  };
+
+  const handleEscalate = async (msg: Message) => {
+    if (!sessionId || msg.role !== 'assistant') return;
+    setEscalatingMessage(msg.id);
+    try {
+      const ticket = await createEscalation({
+        sessionId,
+        query: msg.question ?? 'Unspecified follow-up',
+        aiResponse: msg.content,
+        sources: msg.sources ?? [],
+        confidence: msg.confidence ?? 0,
+        reason:
+          (msg.confidence ?? 1) < 0.7
+            ? 'Low confidence or high-risk enterprise query'
+            : 'User requested human expert review',
+        priority: (msg.confidence ?? 1) < 0.5 ? 'high' : 'medium',
+      });
+      setMessages((prev) =>
+        prev.map((item) =>
+          item.id === msg.id
+            ? { ...item, escalationTicket: ticket.ticket_id, escalationError: undefined }
+            : item
+        )
+      );
+    } catch (err) {
+      setMessages((prev) =>
+        prev.map((item) =>
+          item.id === msg.id
+            ? {
+                ...item,
+                escalationError:
+                  err instanceof Error ? err.message : 'Escalation failed',
+              }
+            : item
+        )
+      );
+    } finally {
+      setEscalatingMessage(null);
+    }
+  };
+
+  const handleExport = (msg: Message) => {
+    const sourceText = (msg.sources ?? [])
+      .map(
+        (source, index) =>
+          `${index + 1}. ${source.title} (${source.channel}, ${Math.round(
+            source.score * 100
+          )}%)\n${source.excerpt}`
+      )
+      .join('\n\n');
+    const body = [
+      'Karena AI Response Export',
+      '',
+      `Question: ${msg.question ?? 'N/A'}`,
+      '',
+      `Answer:\n${msg.content}`,
+      '',
+      `Confidence: ${Math.round((msg.confidence ?? 0) * 100)}%`,
+      `Latency: ${Math.round(msg.latency_ms ?? 0)}ms`,
+      '',
+      `Sources:\n${sourceText || 'No sources returned.'}`,
+    ].join('\n');
+    const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `karena-response-${Date.now()}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="flex h-screen flex-col bg-[#0a0a0f] text-white">
@@ -157,13 +263,64 @@ export default function Chat() {
                     {msg.latency_ms != null && (
                       <span>{msg.latency_ms.toFixed(0)}ms</span>
                     )}
-                    <button type="button" aria-label="Helpful">
+                    <button
+                      type="button"
+                      aria-label="Helpful"
+                      title="Helpful"
+                      onClick={() => handleFeedback(msg.id, 1)}
+                      className={cn(
+                        'transition hover:text-emerald-300',
+                        feedbackByMessage[msg.id] === 1 && 'text-emerald-300'
+                      )}
+                    >
                       <ThumbsUp className="h-3.5 w-3.5" />
                     </button>
-                    <button type="button" aria-label="Not helpful">
+                    <button
+                      type="button"
+                      aria-label="Not helpful"
+                      title="Not helpful"
+                      onClick={() => handleFeedback(msg.id, -1)}
+                      className={cn(
+                        'transition hover:text-rose-300',
+                        feedbackByMessage[msg.id] === -1 && 'text-rose-300'
+                      )}
+                    >
                       <ThumbsDown className="h-3.5 w-3.5" />
                     </button>
+                    <button
+                      type="button"
+                      aria-label="Export response"
+                      title="Export response"
+                      onClick={() => handleExport(msg)}
+                      className="transition hover:text-sky-300"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Escalate to human expert"
+                      title="Escalate to human expert"
+                      onClick={() => handleEscalate(msg)}
+                      disabled={escalatingMessage === msg.id || !!msg.escalationTicket}
+                      className="transition hover:text-amber-300 disabled:opacity-50"
+                    >
+                      {escalatingMessage === msg.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Headphones className="h-3.5 w-3.5" />
+                      )}
+                    </button>
                   </div>
+                )}
+                {msg.escalationTicket && (
+                  <p className="mt-2 text-xs text-amber-200">
+                    Escalation ticket created: {msg.escalationTicket}
+                  </p>
+                )}
+                {msg.escalationError && (
+                  <p className="mt-2 text-xs text-rose-300">
+                    {msg.escalationError}
+                  </p>
                 )}
               </div>
 
@@ -205,7 +362,7 @@ export default function Chat() {
           {loading && (
             <div className="flex items-center gap-2 text-white/50">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Retrieving and synthesizing...
+              {progressStep ?? 'Retrieving and synthesizing...'}
             </div>
           )}
           <div ref={bottomRef} />

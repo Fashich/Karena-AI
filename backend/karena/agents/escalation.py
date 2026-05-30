@@ -64,6 +64,27 @@ class EscalationTicket:
 _escalations: dict[str, EscalationTicket] = {}
 
 
+def escalation_summary(tenant_id: str | None = None) -> dict:
+    tickets = list(_escalations.values())
+    if tenant_id:
+        tickets = [ticket for ticket in tickets if ticket.context.tenant_id == tenant_id]
+    open_statuses = {
+        EscalationStatus.PENDING,
+        EscalationStatus.ASSIGNED,
+        EscalationStatus.IN_PROGRESS,
+    }
+    return {
+        "total": len(tickets),
+        "open": sum(1 for ticket in tickets if ticket.status in open_statuses),
+        "resolved": sum(1 for ticket in tickets if ticket.status == EscalationStatus.RESOLVED),
+        "high_priority": sum(
+            1
+            for ticket in tickets
+            if ticket.priority in {EscalationPriority.HIGH, EscalationPriority.CRITICAL}
+        ),
+    }
+
+
 class TicketingIntegration:
     """Base class for ticketing system integrations."""
 

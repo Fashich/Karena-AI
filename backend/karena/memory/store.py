@@ -4,7 +4,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, String, Text, select
+from sqlalchemy import Column, DateTime, Integer, String, Text, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -33,6 +33,16 @@ class MessageModel(Base):
     role = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     sources_json = Column(Text, default="[]")
+    created_at = Column(DateTime, nullable=False)
+
+
+class FeedbackModel(Base):
+    __tablename__ = "feedback"
+
+    id = Column(String, primary_key=True)
+    session_id = Column(String, nullable=False, index=True)
+    rating = Column(Integer, nullable=False)
+    comment = Column(Text, default="")
     created_at = Column(DateTime, nullable=False)
 
 
@@ -103,3 +113,42 @@ class MemoryStore:
             }
             for r in rows
         ]
+
+    async def add_feedback(
+        self,
+        session_id: str,
+        rating: int,
+        *,
+        comment: str | None = None,
+    ) -> str:
+        feedback_id = str(uuid.uuid4())
+        async with _session_factory() as db:
+            db.add(
+                FeedbackModel(
+                    id=feedback_id,
+                    session_id=session_id,
+                    rating=rating,
+                    comment=comment or "",
+                    created_at=_now(),
+                )
+            )
+            await db.commit()
+        return feedback_id
+
+    async def feedback_summary(self) -> dict:
+        async with _session_factory() as db:
+            result = await db.execute(select(FeedbackModel))
+            rows = result.scalars().all()
+
+        total = len(rows)
+        positive = sum(1 for row in rows if row.rating > 0)
+        negative = sum(1 for row in rows if row.rating < 0)
+        neutral = total - positive - negative
+        satisfaction = positive / total if total else None
+        return {
+            "total": total,
+            "positive": positive,
+            "neutral": neutral,
+            "negative": negative,
+            "satisfaction": satisfaction,
+        }

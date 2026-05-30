@@ -11,15 +11,25 @@ from karena.memory.store import init_db
 from karena.observability.metrics import setup_metrics
 from karena.rag.embeddings import get_embedding_service
 from karena.rag.vector_store import get_vector_store
+from karena.security.audit import AuditEventType, get_audit_logger
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    get_settings()  # Initialize settings
+    settings = get_settings()  # Initialize settings
     await init_db()
     vector_store = get_vector_store()
     await vector_store.ensure_collection()
     get_embedding_service()  # warm model load
+    get_audit_logger(settings.audit_db_path).log(
+        AuditEventType.SYSTEM_STARTUP,
+        actor_id="system",
+        actor_type="service",
+        action="startup",
+        resource_type="api",
+        tenant_id=settings.default_tenant_id,
+        details={"environment": settings.environment, "vector_store": settings.vector_store},
+    )
     yield
 
 

@@ -43,7 +43,15 @@ def refresh_bm25_corpus(tenant_id: str) -> None:
 class HybridRetriever:
     """Combines Qdrant dense search with in-memory BM25 over corpus cache."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        dense_retriever=None,
+        bm25_retriever=None,
+        alpha: float | None = None,
+    ) -> None:
+        self.dense_retriever = dense_retriever
+        self.bm25_retriever = bm25_retriever
+        self.alpha = 0.7 if alpha is None else alpha
         self._bm25_index: BM25Okapi | None = None
         self._bm25_docs: list[dict[str, Any]] = []
 
@@ -52,7 +60,37 @@ class HybridRetriever:
         tokenized = [doc["text"].lower().split() for doc in documents]
         self._bm25_index = BM25Okapi(tokenized) if tokenized else None
 
-    async def retrieve(
+    def retrieve(
+        self,
+        query: str,
+        *,
+        tenant_id: str | None = None,
+        top_k: int | None = None,
+    ):
+        if self.dense_retriever is not None or self.bm25_retriever is not None:
+            return self._retrieve_sync_compat(query, top_k=top_k)
+        return self._retrieve_async(query, tenant_id=tenant_id or "default", top_k=top_k)
+
+    def _retrieve_sync_compat(self, query: str, top_k: int | None = None) -> list[dict[str, Any]]:
+        k = top_k or 10
+        dense_results = (
+            self.dense_retriever.retrieve(query, top_k=k) if self.dense_retriever else []
+        )
+        sparse_results = self.bm25_retriever.retrieve(query, top_k=k) if self.bm25_retriever else []
+        scores: dict[str, dict[str, Any]] = {}
+        for doc in dense_results:
+            doc_id = doc.get("id", doc.get("content", ""))
+            scores[doc_id] = {**doc, "score": float(doc.get("score", 0.0)) * self.alpha}
+        for doc in sparse_results:
+            doc_id = doc.get("id", doc.get("content", ""))
+            weighted = float(doc.get("score", 0.0)) * (1.0 - self.alpha)
+            if doc_id in scores:
+                scores[doc_id]["score"] += weighted
+            else:
+                scores[doc_id] = {**doc, "score": weighted}
+        return sorted(scores.values(), key=lambda item: item.get("score", 0.0), reverse=True)[:k]
+
+    async def _retrieve_async(
         self,
         query: str,
         *,

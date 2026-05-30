@@ -3,6 +3,8 @@ import { Link } from 'react-router';
 import {
   Activity,
   Database,
+  Gauge,
+  Headphones,
   MessageSquare,
   Upload,
 } from 'lucide-react';
@@ -79,7 +81,7 @@ export default function Admin() {
           </div>
         )}
 
-        <div className="mb-8 grid gap-4 md:grid-cols-3">
+        <div className="mb-8 grid gap-4 md:grid-cols-4">
           <Card className="border-white/10 bg-white/5">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-sm font-normal text-white/70">
@@ -127,7 +129,109 @@ export default function Admin() {
               </p>
             </CardContent>
           </Card>
+
+          <Card className="border-white/10 bg-white/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-normal text-white/70">
+                <Gauge className="h-4 w-4" />
+                Feedback
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-semibold">
+                {stats?.feedback.satisfaction == null
+                  ? '—'
+                  : `${Math.round(stats.feedback.satisfaction * 100)}%`}
+              </p>
+              <p className="text-xs text-white/50">
+                {stats?.feedback.total ?? 0} responses captured
+              </p>
+            </CardContent>
+          </Card>
         </div>
+
+        <div className="mb-8 grid gap-4 md:grid-cols-4">
+          <Card className="border-white/10 bg-white/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-normal text-white/70">
+                MTTR Reduction
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold">
+                {stats?.validation_metrics.mttr_reduction_target ?? '30%'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-white/10 bg-white/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-normal text-white/70">
+                Discovery Acceleration
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold">
+                {stats?.validation_metrics.knowledge_discovery_acceleration_target ??
+                  '40%'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-white/10 bg-white/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-normal text-white/70">
+                Maintenance Reduction
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold">
+                {stats?.validation_metrics.documentation_maintenance_reduction_target ??
+                  '25%'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-white/10 bg-white/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-normal text-white/70">
+                <Headphones className="h-4 w-4" />
+                Human Handoff
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold">
+                {stats?.escalation?.open ?? 0}
+              </p>
+              <p className="text-xs text-white/50">
+                {stats?.escalation?.total ?? 0} total tickets
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="mb-8 border-white/10 bg-white/5">
+          <CardHeader>
+            <CardTitle className="text-base">Demo Readiness</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 text-sm md:grid-cols-5">
+              {Object.entries(stats?.demo_readiness ?? {}).map(([key, value]) => (
+                <div
+                  key={key}
+                  className="rounded-lg border border-white/10 bg-black/20 p-3"
+                >
+                  <p className="capitalize text-white/60">
+                    {key.replaceAll('_', ' ')}
+                  </p>
+                  <p className={value ? 'text-emerald-300' : 'text-amber-300'}>
+                    {value ? 'Ready' : 'Needs setup'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="mb-8 border-white/10 bg-white/5">
           <CardHeader>

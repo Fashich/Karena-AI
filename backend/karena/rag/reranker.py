@@ -41,3 +41,22 @@ class ReRanker:
                 )
             )
         return reranked
+
+
+class SemanticReranker:
+    """Cross-encoder compatibility reranker for legacy unit tests."""
+
+    def __init__(self, model_name: str) -> None:
+        from sentence_transformers import CrossEncoder
+
+        self.model_name = model_name
+        self._model = CrossEncoder(model_name)
+
+    def rerank(self, query: str, documents: list[dict], top_k: int = 5) -> list[dict]:
+        pairs = [(query, doc.get("content", doc.get("text", ""))) for doc in documents]
+        scores = self._model.predict(pairs)
+        ranked = []
+        for doc, score in zip(documents, scores):
+            ranked.append({**doc, "score": float(score)})
+        ranked.sort(key=lambda doc: doc["score"], reverse=True)
+        return ranked[:top_k]

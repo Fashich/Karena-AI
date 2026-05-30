@@ -26,6 +26,12 @@ def _get_redis():
 class CacheTier:
     """L1: in-process memory. L2: Redis for query-response and retrieval caches."""
 
+    def get(self, key: str) -> dict | None:
+        return _memory_cache.get(key)
+
+    def set(self, key: str, value: dict) -> None:
+        _memory_cache[key] = value
+
     async def get_response(self, key: str) -> dict | None:
         if key in _memory_cache:
             return _memory_cache[key]

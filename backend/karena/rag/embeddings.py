@@ -27,6 +27,19 @@ class EmbeddingService:
         return self.embed_texts([query])[0].tolist()
 
 
+class EmbeddingModel:
+    """Synchronous compatibility wrapper around SentenceTransformer."""
+
+    def __init__(self, model_name: str) -> None:
+        import sentence_transformers
+
+        self.model_name = model_name
+        self._model = sentence_transformers.SentenceTransformer(model_name)
+
+    def encode(self, text: str):
+        return self._model.encode(text)
+
+
 @lru_cache
 def get_embedding_service() -> EmbeddingService:
     return EmbeddingService()

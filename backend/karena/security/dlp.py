@@ -59,7 +59,10 @@ class DLPEngine:
 
     def __init__(self) -> None:
         self.policies: dict[str, DLPPolicy] = {}
+        self.patterns: dict[str, list[str]] = {}
         self._compile_patterns()
+        for policy in create_default_policies():
+            self.register_policy(policy)
 
     def _compile_patterns(self) -> None:
         """Pre-compile regex patterns for performance."""
@@ -68,6 +71,7 @@ class DLPEngine:
     def register_policy(self, policy: DLPPolicy) -> None:
         """Register a DLP policy."""
         self.policies[policy.name] = policy
+        self.patterns[policy.name] = policy.patterns
         for pattern in policy.patterns:
             try:
                 self._compiled_patterns[f"{policy.name}:{pattern}"] = re.compile(
@@ -161,6 +165,29 @@ class DLPEngine:
             policy_violations=policy_violations,
         )
 
+    def scan(self, content: str) -> dict[str, Any]:
+        """Legacy dict-style scan API."""
+        result = self.inspect(content)
+        detected_types: set[str] = set()
+        for detection in result.detected_patterns:
+            policy = detection.get("policy", "")
+            if "credit_card" in policy:
+                detected_types.add("credit_card")
+            elif "ssn" in policy:
+                detected_types.add("ssn")
+            elif "api_key" in policy:
+                detected_types.add("api_key")
+            elif "email" in policy:
+                detected_types.add("email")
+            else:
+                detected_types.add(policy)
+        return {
+            "has_sensitive_data": bool(detected_types),
+            "detected_types": sorted(detected_types),
+            "recommended_action": result.recommended_action.value,
+            "redacted_content": result.redacted_content,
+        }
+
     def _redact_content(self, content: str, detections: list[dict]) -> str:
         """Redact sensitive content based on detections."""
         # Sort by position (reverse order to maintain indices)
@@ -200,8 +227,7 @@ def create_default_policies() -> list[DLPPolicy]:
             description="Detect credit card numbers",
             sensitivity_level=DataSensitivity.CONFIDENTIAL,
             patterns=[
-                r"\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})\b",
-                r"\b(?:6(?:011|5[0-9]{2})[0-9]{12})\b",
+                r"\b(?:4[0-9][0-9\-\s]{11,19}|5[1-5][0-9\-\s]{12,19}|3[47][0-9\-\s]{11,18}|6(?:011|5[0-9]{2})[0-9\-\s]{10,19})\b",
             ],
             actions=[DLPAction.REDACT, DLPAction.ALERT],
         ),
@@ -209,7 +235,7 @@ def create_default_policies() -> list[DLPPolicy]:
             name="ssn_detection",
             description="Detect US Social Security Numbers",
             sensitivity_level=DataSensitivity.RESTRICTED,
-            patterns=[r"\b\d{3}-\d{2}-\d{4}\b"],
+            patterns=[r"\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b"],
             actions=[DLPAction.REDACT, DLPAction.BLOCK],
         ),
         DLPPolicy(
@@ -226,6 +252,8 @@ def create_default_policies() -> list[DLPPolicy]:
             patterns=[
                 r"(?i)(api[_-]?key|apikey)\s*[=:]\s*['\"]?[A-Za-z0-9_\-]{20,}['\"]?",
                 r"(?i)(secret|token)\s*[=:]\s*['\"]?[A-Za-z0-9_\-]{20,}['\"]?",
+                r"\bsk-[A-Za-z0-9_\-]{10,}\b",
+                r"\bBearer\s+[A-Za-z0-9_\-.]{20,}\b",
             ],
             actions=[DLPAction.REDACT, DLPAction.BLOCK, DLPAction.ALERT],
         ),

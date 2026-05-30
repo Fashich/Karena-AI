@@ -121,7 +121,17 @@ class Tracer:
         """End a span."""
         span.end_time = time.time()
         span.status = status
-        _current_span.set(None)
+        parent = None
+        trace = self._traces.get(span.trace_id)
+        if trace and span.parent_span_id:
+            if trace.root_span.span_id == span.parent_span_id:
+                parent = trace.root_span
+            else:
+                parent = next(
+                    (s for s in trace.child_spans if s.span_id == span.parent_span_id),
+                    None,
+                )
+        _current_span.set(parent)
 
     def record_error(self, span: Span, error: Exception) -> None:
         """Record an error in a span."""

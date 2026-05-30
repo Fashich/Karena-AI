@@ -3,6 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,6 +39,7 @@ class Settings(BaseSettings):
 
     # Database (conversation memory)
     database_url: str = "sqlite+aiosqlite:///./data/karena.db"
+    audit_db_path: str = "./data/audit.db"
 
     # Embeddings
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -63,6 +65,22 @@ class Settings(BaseSettings):
 
     # Multi-tenancy
     default_tenant_id: str = "default"
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def tolerate_noisy_debug_env(cls, value: object) -> object:
+        if isinstance(value, str) and value.lower() not in {
+            "true",
+            "false",
+            "1",
+            "0",
+            "yes",
+            "no",
+            "on",
+            "off",
+        }:
+            return False
+        return value
 
     @property
     def cors_origin_list(self) -> list[str]:

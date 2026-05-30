@@ -16,6 +16,31 @@ class IngestionResult:
     title: str
 
 
+class ETLPipeline:
+    """Compatibility wrapper for older document-ingestion callers."""
+
+    async def process(
+        self,
+        *,
+        filename: str,
+        content: bytes,
+        title: str | None = None,
+        tenant_id: str | None = None,
+    ) -> dict:
+        result = await ingest_document(
+            filename=filename,
+            content=content,
+            title=title,
+            tenant_id=tenant_id,
+        )
+        return {
+            "document_id": result.source_id,
+            "status": "indexed",
+            "chunks_indexed": result.chunks_indexed,
+            "title": result.title,
+        }
+
+
 async def ingest_document(
     *,
     filename: str,
