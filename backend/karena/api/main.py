@@ -10,7 +10,7 @@ settings = get_settings()
 app = FastAPI(
     title="Karena AI Enterprise",
     description="Enterprise RAG Knowledge Intelligence Platform",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # CORS
@@ -33,10 +33,13 @@ app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(escalation.router, prefix="/api/v1/escalation", tags=["Escalation"])
 
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "version": "1.0.0"}
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8080)
