@@ -31,7 +31,9 @@ app.include_router(chat.router, prefix="/api/v1/chat", tags=["Chat"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
-app.include_router(escalation.router, prefix="/api/v1/escalation", tags=["Escalation"])
+app.include_router(
+    escalation.router, prefix="/api/v1/escalation", tags=["Escalation"]
+)
 
 
 @app.get("/health")
