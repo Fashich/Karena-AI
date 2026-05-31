@@ -5,13 +5,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from karena.api.routes import admin, chat, escalation, health, ingest, tracing
+from karena.api.routes import admin, auth, chat, compliance, escalation, health, ingest, tracing
+from karena.api.gateway import get_gateway
 from karena.config import get_settings
 from karena.memory.store import init_db
 from karena.observability.metrics import setup_metrics
 from karena.rag.embeddings import get_embedding_service
 from karena.rag.vector_store import get_vector_store
 from karena.security.audit import AuditEventType, get_audit_logger
+from karena.security.oidc import initialize_oidc_providers
 
 
 @asynccontextmanager
@@ -21,6 +23,18 @@ async def lifespan(app: FastAPI):
     vector_store = get_vector_store()
     await vector_store.ensure_collection()
     get_embedding_service()  # warm model load
+
+    if settings.oauth2_provider and settings.oauth2_client_id:
+        await initialize_oidc_providers()
+
+        if settings.oauth2_issuer:
+            get_gateway().configure_oauth2(
+                provider=settings.oauth2_provider,
+                client_id=settings.oauth2_client_id,
+                client_secret=settings.oauth2_client_secret or "",
+                issuer=settings.oauth2_issuer,
+            )
+
     get_audit_logger(settings.audit_db_path).log(
         AuditEventType.SYSTEM_STARTUP,
         actor_id="system",
@@ -28,7 +42,11 @@ async def lifespan(app: FastAPI):
         action="startup",
         resource_type="api",
         tenant_id=settings.default_tenant_id,
-        details={"environment": settings.environment, "vector_store": settings.vector_store},
+        details={
+            "environment": settings.environment,
+            "vector_store": settings.vector_store,
+            "oidc_enabled": bool(settings.oauth2_provider and settings.oauth2_issuer),
+        },
     )
     yield
 
@@ -76,6 +94,8 @@ def create_app() -> FastAPI:
     app.include_router(escalation.router, prefix=prefix, tags=["escalation"])
     app.include_router(ingest.router, prefix=prefix, tags=["ingest"])
     app.include_router(admin.router, prefix=prefix, tags=["admin"])
+    app.include_router(auth.router, prefix=prefix, tags=["auth"])
+    app.include_router(compliance.router, prefix=prefix, tags=["compliance"])
     app.include_router(tracing.router, prefix=prefix, tags=["observability"])
 
     setup_metrics(app)

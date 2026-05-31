@@ -2,29 +2,35 @@
 
 from functools import lru_cache
 
-import numpy as np
-from sentence_transformers import SentenceTransformer
-
 from karena.config import get_settings
+from karena.rag.model_registry import get_model_registry
 
 
 class EmbeddingService:
-    def __init__(self) -> None:
+    def __init__(self, model_name: str | None = None) -> None:
+        from sentence_transformers import SentenceTransformer
+
         settings = get_settings()
-        self.model_name = settings.embedding_model
+        self.model_name = model_name or (
+            get_model_registry().get_current_model().model_name
+            if get_model_registry().get_current_model()
+            else settings.embedding_model
+        )
         self.dimension = settings.embedding_dim
         self._model = SentenceTransformer(self.model_name)
 
-    def embed_texts(self, texts: list[str]) -> np.ndarray:
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        import numpy as np
+
         vectors = self._model.encode(
             texts,
             normalize_embeddings=True,
             show_progress_bar=False,
         )
-        return np.asarray(vectors, dtype=np.float32)
+        return np.asarray(vectors, dtype=np.float32).tolist()
 
     def embed_query(self, query: str) -> list[float]:
-        return self.embed_texts([query])[0].tolist()
+        return self.embed_texts([query])[0]
 
 
 class EmbeddingModel:

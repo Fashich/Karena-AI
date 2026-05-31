@@ -76,8 +76,10 @@ async def ingest_document(
     count = await vector_store.upsert_chunks(chunks, vectors)
 
     from karena.rag.hybrid_retriever import refresh_bm25_corpus
+    from karena.rag.drift import get_drift_detector
 
     refresh_bm25_corpus(tenant_id)
+    get_drift_detector().update_baseline(tenant_id, [c.text for c in chunks])
 
     return IngestionResult(
         source_id=source_id,

@@ -2,8 +2,6 @@
 
 from typing import Any
 
-import numpy as np
-
 from karena.config import get_settings
 from karena.rag.chunking import DocumentChunk
 
@@ -25,6 +23,8 @@ class MemoryVectorStore:
         chunks: list[DocumentChunk],
         vectors: list[list[float]],
     ) -> int:
+        import numpy as np
+
         for chunk, vector in zip(chunks, vectors):
             self._points[chunk.id] = {
                 "vector": np.asarray(vector, dtype=np.float32),
@@ -46,6 +46,8 @@ class MemoryVectorStore:
     ) -> list[dict[str, Any]]:
         if not self._points:
             return []
+
+        import numpy as np
 
         q = np.asarray(query_vector, dtype=np.float32)
         q_norm = np.linalg.norm(q) or 1.0

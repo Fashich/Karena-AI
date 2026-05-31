@@ -62,9 +62,20 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
     require_auth: bool = False
+    oauth2_provider: str | None = None
+    oauth2_issuer: str | None = None
+    oauth2_client_id: str | None = None
+    oauth2_client_secret: str | None = None
+    oauth2_redirect_uri: str | None = None
+    oauth2_scope: str = "openid profile email"
+    oauth2_jwks_refresh_seconds: int = 3600
 
     # Multi-tenancy
     default_tenant_id: str = "default"
+
+    @property
+    def auth_enabled(self) -> bool:
+        return self.require_auth or bool(self.oauth2_provider and self.oauth2_issuer and self.oauth2_client_id)
 
     @field_validator("debug", mode="before")
     @classmethod
