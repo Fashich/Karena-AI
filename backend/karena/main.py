@@ -6,6 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from karena.api.routes import admin, auth, chat, compliance, escalation, health, ingest, tracing
+from karena.api.routes import analytics as analytics_router
+from karena.api.routes import multimodal as multimodal_router
 from karena.api.gateway import get_gateway
 from karena.config import get_settings
 from karena.memory.store import init_db
@@ -97,6 +99,9 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix=prefix, tags=["auth"])
     app.include_router(compliance.router, prefix=prefix, tags=["compliance"])
     app.include_router(tracing.router, prefix=prefix, tags=["observability"])
+    # Community Decision Intelligence (hackathon extensions)
+    app.include_router(analytics_router.router, prefix=prefix, tags=["analytics"])
+    app.include_router(multimodal_router.router, prefix=prefix, tags=["multimodal"])
 
     setup_metrics(app)
     return app

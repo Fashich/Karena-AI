@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 
 from karena.agents.escalation import escalation_summary
 from karena.api.gateway import Permission, TokenPayload, requires_permission
@@ -16,7 +18,7 @@ from karena.security.auth import get_api_key_manager, get_session_manager, APIKe
 router = APIRouter()
 
 
-@router.get("/admin/stats")
+@router.get("/stats")
 async def admin_stats(
     current_user: TokenPayload = Depends(requires_permission(Permission.VIEW_ANALYTICS)),
 ):
@@ -64,7 +66,7 @@ async def admin_stats(
     }
 
 
-@router.get("/admin/audit")
+@router.get("/audit")
 async def audit_events(
     limit: int = 100,
     event_type: AuditEventType | None = None,
@@ -79,7 +81,7 @@ async def audit_events(
     return {"events": [event.to_dict() for event in events], "total": len(events)}
 
 
-@router.get("/admin/compliance-report")
+@router.get("/compliance-report")
 async def compliance_report(
     days: int = 30,
     current_user: TokenPayload = Depends(requires_permission(Permission.ACCESS_AUDIT_LOGS)),
@@ -96,7 +98,26 @@ async def compliance_report(
     return report
 
 
-@router.get("/admin/model-registry")
+class ModelRegisterRequest(BaseModel):
+    model_name: str = Field(..., examples=["sentence-transformers/all-MiniLM-L6-v2"])
+    version: str = Field(..., examples=["1.0.0"])
+    dimension: int | None = Field(None, description="Embedding dimension for the model")
+    metadata: dict[str, Any] | None = Field(default_factory=dict)
+
+
+class ModelEvaluationRequest(BaseModel):
+    model_id: str
+    metrics: dict[str, float]
+    sample_count: int = 0
+    dataset_id: str | None = None
+    notes: str = ""
+
+
+class ModelRetrainRequest(BaseModel):
+    model_id: str
+
+
+@router.get("/model-registry")
 async def model_registry(
     current_user: TokenPayload = Depends(requires_permission(Permission.VIEW_ANALYTICS)),
 ):
@@ -130,7 +151,7 @@ async def model_registry(
                 "latest_evaluation": {
                     "evaluation_id": model.latest_evaluation().evaluation_id if model.latest_evaluation() else None,
                     "passed_quality_gate": model.latest_evaluation().passed_quality_gate if model.latest_evaluation() else False,
-                    "metrics": dict(model.latest_evaluation().metrics) if model.latest_evaluation() else {},
+                    "metrics": {metric.value: value for metric, value in model.latest_evaluation().metrics.items()} if model.latest_evaluation() else {},
                 } if model.latest_evaluation() else None,
             }
             for model in registry.list_models()
@@ -138,7 +159,137 @@ async def model_registry(
     }
 
 
-@router.get("/admin/model-evaluation")
+@router.post("/model-register")
+async def register_model(
+    payload: ModelRegisterRequest,
+    current_user: TokenPayload = Depends(requires_permission(Permission.MANAGE_MODELS)),
+):
+    registry = get_embedding_model_registry()
+    model = registry.register_model(
+        model_name=payload.model_name,
+        version=payload.version,
+        dimension=payload.dimension,
+        metadata=payload.metadata,
+    )
+    get_audit_logger(get_settings().audit_db_path).log(
+        AuditEventType.CONFIG_CHANGE,
+        actor_id=current_user.sub,
+        actor_type="user",
+        action="model_registered",
+        resource_type="embedding_model",
+        resource_id=model.model_id,
+        tenant_id=current_user.tenant_id,
+        details={"model_name": model.model_name, "version": model.version},
+    )
+    return {"model_id": model.model_id, "status": model.status}
+
+
+@router.post("/model-evaluate")
+async def evaluate_model(
+    payload: ModelEvaluationRequest,
+    current_user: TokenPayload = Depends(requires_permission(Permission.VIEW_ANALYTICS)),
+):
+    registry = get_embedding_model_registry()
+    try:
+        metrics = {
+            ModelEvaluationMetric(metric_name): value
+            for metric_name, value in payload.metrics.items()
+        }
+    except ValueError as exc:
+        return {"success": False, "error": str(exc)}
+
+    evaluation = registry.add_evaluation(
+        payload.model_id,
+        metrics,
+        sample_count=payload.sample_count,
+        dataset_id=payload.dataset_id,
+        notes=payload.notes,
+    )
+    if not evaluation:
+        return {"success": False, "error": "Model not found"}
+
+    get_audit_logger(get_settings().audit_db_path).log(
+        AuditEventType.CONFIG_CHANGE,
+        actor_id=current_user.sub,
+        actor_type="user",
+        action="model_evaluated",
+        resource_type="embedding_model",
+        resource_id=payload.model_id,
+        tenant_id=current_user.tenant_id,
+        details={"evaluation_id": evaluation.evaluation_id, "passed_quality_gate": evaluation.passed_quality_gate},
+    )
+
+    return {
+        "success": True,
+        "evaluation_id": evaluation.evaluation_id,
+        "passed_quality_gate": evaluation.passed_quality_gate,
+    }
+
+
+@router.post("/model-retrain")
+async def retrain_model(
+    payload: ModelRetrainRequest,
+    current_user: TokenPayload = Depends(requires_permission(Permission.MANAGE_MODELS)),
+):
+    registry = get_embedding_model_registry()
+    registry.trigger_retraining(payload.model_id)
+    get_audit_logger(get_settings().audit_db_path).log(
+        AuditEventType.CONFIG_CHANGE,
+        actor_id=current_user.sub,
+        actor_type="user",
+        action="model_retraining_triggered",
+        resource_type="embedding_model",
+        resource_id=payload.model_id,
+        tenant_id=current_user.tenant_id,
+    )
+    return {"success": True, "model_id": payload.model_id}
+
+
+@router.post("/model-promote")
+async def promote_model(
+    model_id: str,
+    to_status: str,
+    traffic_percentage: float | None = None,
+    current_user: TokenPayload = Depends(requires_permission(Permission.MANAGE_MODELS)),
+):
+    registry = get_embedding_model_registry()
+    model = registry.get_model(model_id)
+
+    if not model:
+        return {"error": "Model not found", "model_id": model_id}
+
+    success = False
+    if to_status == "canary":
+        success = registry.promote_to_canary(model_id, traffic_percentage=traffic_percentage or 10.0)
+    elif to_status == "stable":
+        success = registry.promote_to_stable(model_id)
+    elif to_status == "deprecated":
+        success = registry.deprecate_model(model_id)
+    elif to_status == "retired":
+        success = registry.retire_model(model_id)
+
+    if success:
+        updated_model = registry.get_model(model_id)
+        get_audit_logger(get_settings().audit_db_path).log(
+            AuditEventType.CONFIG_CHANGE,
+            actor_id=current_user.sub,
+            actor_type="user",
+            action=f"promoted to {to_status}",
+            resource_type="embedding_model",
+            resource_id=model_id,
+            tenant_id=current_user.tenant_id,
+            details={"model_id": model_id, "new_status": to_status},
+        )
+        return {
+            "success": True,
+            "model_id": model_id,
+            "new_status": updated_model.status if updated_model else None,
+        }
+
+    return {"success": False, "error": f"Cannot promote model to {to_status} from current status"}
+
+
+@router.get("/model-evaluation")
 async def model_evaluation(
     model_id: str,
     current_user: TokenPayload = Depends(requires_permission(Permission.VIEW_ANALYTICS)),
@@ -169,50 +320,7 @@ async def model_evaluation(
     }
 
 
-@router.post("/admin/model-promote")
-async def promote_model(
-    model_id: str,
-    to_status: str,
-    traffic_percentage: float | None = None,
-    current_user: TokenPayload = Depends(requires_permission(Permission.MANAGE_MODELS)),
-):
-    """Promote a model through lifecycle stages."""
-    registry = get_embedding_model_registry()
-    model = registry.get_model(model_id)
-    
-    if not model:
-        return {"error": "Model not found", "model_id": model_id}
-    
-    success = False
-    if to_status == "canary":
-        success = registry.promote_to_canary(model_id, traffic_percentage=traffic_percentage or 10.0)
-    elif to_status == "stable":
-        success = registry.promote_to_stable(model_id)
-    elif to_status == "deprecated":
-        success = registry.deprecate_model(model_id)
-    elif to_status == "retired":
-        success = registry.retire_model(model_id)
-    
-    if success:
-        updated_model = registry.get_model(model_id)
-        get_audit_logger(get_settings().audit_db_path).log_event(
-            event_type=AuditEventType.CONFIGURATION_CHANGE,
-            tenant_id=current_user.tenant_id,
-            user_id=current_user.sub,
-            resource="embedding_model",
-            action=f"promoted to {to_status}",
-            details={"model_id": model_id, "new_status": to_status},
-        )
-        return {
-            "success": True,
-            "model_id": model_id,
-            "new_status": updated_model.status if updated_model else None,
-        }
-    else:
-        return {"success": False, "error": f"Cannot promote model to {to_status} from current status"}
-
-
-@router.get("/admin/auth-metrics")
+@router.get("/auth-metrics")
 async def auth_metrics(
     current_user: TokenPayload = Depends(requires_permission(Permission.ACCESS_AUDIT_LOGS)),
 ):
@@ -244,7 +352,7 @@ async def auth_metrics(
 
 
 
-@router.get("/admin/api-keys")
+@router.get("/api-keys")
 async def list_api_keys(
     current_user: TokenPayload = Depends(requires_permission(Permission.MANAGE_API_KEYS)),
 ):
@@ -268,7 +376,7 @@ async def list_api_keys(
     }
 
 
-@router.get("/admin/sessions")
+@router.get("/sessions")
 async def list_sessions(
     current_user: TokenPayload = Depends(requires_permission(Permission.ACCESS_AUDIT_LOGS)),
 ):
@@ -292,7 +400,7 @@ async def list_sessions(
 
 
 
-@router.get("/admin/drift")
+@router.get("/drift")
 async def drift_status(
     tenant_id: str | None = None,
     current_user: TokenPayload = Depends(requires_permission(Permission.VIEW_ANALYTICS)),

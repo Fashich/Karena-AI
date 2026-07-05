@@ -10,6 +10,7 @@ Handles:
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -57,6 +58,18 @@ class ModelEvaluation:
     def get_metric(self, metric: ModelEvaluationMetric) -> float | None:
         return self.metrics.get(metric)
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "evaluation_id": self.evaluation_id,
+            "model_id": self.model_id,
+            "timestamp": self.timestamp.isoformat(),
+            "metrics": {metric.value: value for metric, value in self.metrics.items()},
+            "sample_count": self.sample_count,
+            "dataset_id": self.dataset_id,
+            "notes": self.notes,
+            "passed_quality_gate": self.passed_quality_gate,
+        }
+
 
 @dataclass
 class EmbeddingModelVersion:
@@ -89,6 +102,23 @@ class EmbeddingModelVersion:
         if not self.evaluations:
             return None
         return sorted(self.evaluations, key=lambda e: e.timestamp, reverse=True)[0]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "model_id": self.model_id,
+            "version": self.version,
+            "model_name": self.model_name,
+            "source": self.source,
+            "dimension": self.dimension,
+            "created_at": self.created_at.isoformat(),
+            "status": self.status,
+            "promoted_at": self.promoted_at.isoformat() if self.promoted_at else None,
+            "deprecated_at": self.deprecated_at.isoformat() if self.deprecated_at else None,
+            "retired_at": self.retired_at.isoformat() if self.retired_at else None,
+            "canary_traffic_percentage": self.canary_traffic_percentage,
+            "metadata": self.metadata,
+            "latest_evaluation": self.latest_evaluation().to_dict() if self.latest_evaluation() else None,
+        }
 
 
 class EmbeddingModelRegistry:
@@ -203,6 +233,15 @@ class EmbeddingModelRegistry:
             return self._models.get(self._current_model_id)
         return None
 
+    def get_active_model(self) -> EmbeddingModelVersion | None:
+        """Get the model that should be used for current traffic (stable or canary)."""
+        stable = self.get_current_model()
+        canary = self.get_canary_model()
+        if canary and canary.status == ModelStatus.CANARY and canary.canary_traffic_percentage > 0:
+            if random.random() * 100.0 < canary.canary_traffic_percentage:
+                return canary
+        return stable
+
     def get_canary_model(self) -> EmbeddingModelVersion | None:
         """Get the current canary model if any."""
         for model in self._models.values():
@@ -211,8 +250,15 @@ class EmbeddingModelRegistry:
         return None
 
     def get_model(self, model_id: str) -> EmbeddingModelVersion | None:
-        """Get a specific model by ID."""
-        return self._models.get(model_id)
+        """Get a specific model by ID or model name."""
+        model = self._models.get(model_id)
+        if model:
+            return model
+        return next((m for m in self._models.values() if m.model_name == model_id), None)
+
+    def get_model_by_name(self, model_name: str) -> EmbeddingModelVersion | None:
+        """Get a specific model by model name."""
+        return next((m for m in self._models.values() if m.model_name == model_name), None)
 
     def list_models(
         self,

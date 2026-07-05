@@ -222,12 +222,13 @@ class DataRetentionManager:
         self._consent_records[consent.consent_id] = consent
 
         # Audit log consent changes
-        get_audit_logger(get_settings().audit_db_path).log_event(
-            event_type=AuditEventType.CONSENT_CHANGE,
-            tenant_id=tenant_id,
-            user_id=user_id,
-            resource="consent",
+        get_audit_logger(get_settings().audit_db_path).log(
+            AuditEventType.DATA_UPDATE,
+            actor_id=user_id,
+            actor_type="user",
             action="consent_recorded",
+            resource_type="consent",
+            tenant_id=tenant_id,
             details={
                 "consent_type": consent_type.value,
                 "granted": granted,
@@ -281,12 +282,14 @@ class DataRetentionManager:
         self._sar_requests[sar.request_id] = sar
 
         # Audit log SAR creation
-        get_audit_logger(settings.audit_db_path).log_event(
-            event_type=AuditEventType.SAR_REQUEST,
-            tenant_id=tenant_id,
-            user_id=user_id,
-            resource="subject_access_request",
+        get_audit_logger(settings.audit_db_path).log(
+            AuditEventType.DATA_CREATE,
+            actor_id=user_id,
+            actor_type="user",
             action="sar_created",
+            resource_type="subject_access_request",
+            resource_id=sar.request_id,
+            tenant_id=tenant_id,
             details={"request_id": sar.request_id},
         )
 
@@ -307,12 +310,14 @@ class DataRetentionManager:
         sar.completed_at = datetime.now(timezone.utc)
 
         settings = get_settings()
-        get_audit_logger(settings.audit_db_path).log_event(
-            event_type=AuditEventType.SAR_COMPLETED,
-            tenant_id=sar.tenant_id,
-            user_id=sar.user_id,
-            resource="subject_access_request",
+        get_audit_logger(settings.audit_db_path).log(
+            AuditEventType.DATA_EXPORT,
+            actor_id=sar.user_id,
+            actor_type="user",
             action="sar_completed",
+            resource_type="subject_access_request",
+            resource_id=request_id,
+            tenant_id=sar.tenant_id,
             details={"request_id": request_id},
         )
 
@@ -338,12 +343,13 @@ class DataRetentionManager:
             results[category.value] = deleted_count
 
         # Audit log deletion
-        get_audit_logger(settings.audit_db_path).log_event(
-            event_type=AuditEventType.DATA_DELETED,
-            tenant_id=tenant_id,
-            user_id=user_id,
-            resource="user_data",
+        get_audit_logger(settings.audit_db_path).log(
+            AuditEventType.DATA_DELETE,
+            actor_id=user_id,
+            actor_type="user",
             action="data_deleted",
+            resource_type="user_data",
+            tenant_id=tenant_id,
             details={
                 "categories": [c.value for c in (categories or list(DataCategory))],
                 "deletion_counts": results,

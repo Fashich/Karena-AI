@@ -3,7 +3,7 @@
 from functools import lru_cache
 
 from karena.config import get_settings
-from karena.rag.model_registry import get_model_registry
+from karena.rag.model_lifecycle import get_embedding_model_registry
 
 
 class EmbeddingService:
@@ -11,12 +11,14 @@ class EmbeddingService:
         from sentence_transformers import SentenceTransformer
 
         settings = get_settings()
-        self.model_name = model_name or (
-            get_model_registry().get_current_model().model_name
-            if get_model_registry().get_current_model()
-            else settings.embedding_model
-        )
-        self.dimension = settings.embedding_dim
+        selected_model = None
+        if model_name:
+            selected_model = get_embedding_model_registry().get_model(model_name)
+        else:
+            selected_model = get_embedding_model_registry().get_active_model()
+
+        self.model_name = selected_model.model_name if selected_model else settings.embedding_model
+        self.dimension = selected_model.dimension if selected_model else settings.embedding_dim
         self._model = SentenceTransformer(self.model_name)
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
