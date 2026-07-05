@@ -58,9 +58,9 @@ class Permission(str, Enum):
     VIEW_ANALYTICS = "view:analytics"
     MANAGE_USERS = "manage:users"
     MANAGE_TENANTS = "manage:tenants"
-    ACCESS_AUDIT_LOGS = "access:audit_logs"
     MANAGE_MODELS = "manage:models"
     MANAGE_API_KEYS = "manage:api_keys"
+    ACCESS_AUDIT_LOGS = "access:audit_logs"
     CONFIGURE_SYSTEM = "configure:system"
     ESCALATE_QUERIES = "escalate:queries"
 
@@ -87,6 +87,8 @@ ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
         Permission.UPLOAD_DOCUMENTS,
         Permission.VIEW_ANALYTICS,
         Permission.MANAGE_USERS,
+        Permission.MANAGE_MODELS,
+        Permission.MANAGE_API_KEYS,
         Permission.CONFIGURE_SYSTEM,
     },
     UserRole.CTO: {
@@ -94,6 +96,7 @@ ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
         Permission.VIEW_ANALYTICS,
         Permission.ACCESS_AUDIT_LOGS,
         Permission.MANAGE_TENANTS,
+        Permission.MANAGE_MODELS,
     },
     UserRole.SUPER_ADMIN: set(Permission),  # All permissions
 }
@@ -412,19 +415,23 @@ async def get_current_user(request: Request) -> TokenPayload:
 
 
 def requires_permission(permission: Permission):
-    """Dependency factory for permission-based authorization."""
+    """Dependency factory for permission-based authorization.
+    
+    When REQUIRE_AUTH=false, returns a dev bypass token with SUPER_ADMIN role.
+    """
     from karena.config import get_settings as _gs
     if not _gs().require_auth:
-        async def _bypass() -> TokenPayload:
+        async def _dev_bypass() -> TokenPayload:
             return TokenPayload(
-                sub='dev-user',
-                email='dev@karena.ai',
-                tenant_id='default',
+                sub="dev-user",
+                email="dev@karena.local",
                 role=UserRole.SUPER_ADMIN,
-                permissions=list(Permission),
+                tenant_id="default",
+                permissions=set(Permission),
                 exp=int(time.time()) + 86400,
                 iat=int(time.time()),
             )
+        return _dev_bypass
 
     async def check_permission(
         current_user: TokenPayload = Depends(get_current_user),
