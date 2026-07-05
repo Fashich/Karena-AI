@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router';
 import {
   Bus, Heart, Leaf, Users, Siren, GraduationCap, Zap,
@@ -53,26 +53,57 @@ function useCounter(target: number, duration = 1200) {
 }
 
 function LiveMetrics() {
-  const [m, setM] = useState({ decisions: 1247, alerts: 3, communities: 28, uptime: 99.9 });
-  useEffect(() => {
-    const t = setInterval(() => {
-      setM(p => ({
-        decisions:   p.decisions + Math.floor(Math.random() * 3),
-        alerts:      Math.max(1, p.alerts + (Math.random() > 0.85 ? 1 : Math.random() > 0.85 ? -1 : 0)),
-        communities: p.communities,
+  const [m, setM] = useState({
+    decisions: 1247, alerts: 3, communities: 28, uptime: 99.9,
+    urban: 72, healthcare: 78, environment: 52,
+  });
+  const [connected, setConnected] = useState(false);
+  const [secondsAgo, setSecondsAgo] = useState(0);
+
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/analytics/snapshot');
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const s = data.snapshot ?? {};
+      const um = s.urban_mobility ?? {};
+      const hc = s.healthcare ?? {};
+      const ev = s.environment ?? {};
+      const dr = s.disaster_response ?? {};
+      setM({
+        decisions:   Math.round((um.traffic_congestion_index ?? 72) * 17 + 800),
+        alerts:      Math.round(dr.active_incidents ?? 3),
+        communities: 28,
         uptime:      99.9,
-      }));
-    }, 2500);
-    return () => clearInterval(t);
+        urban:       Math.round(um.traffic_congestion_index ?? 72),
+        healthcare:  Math.round(hc.bed_occupancy_pct ?? 78),
+        environment: Math.round(ev.air_quality_index ?? 52),
+      });
+      setConnected(true);
+      setSecondsAgo(0);
+    } catch {
+      setConnected(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchMetrics();
+    const t = setInterval(fetchMetrics, 30_000);
+    return () => clearInterval(t);
+  }, [fetchMetrics]);
+
+  useEffect(() => {
+    const t = setInterval(() => setSecondsAgo(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [connected]);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
       <div className="mb-4 flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-widest text-white/40">Live Platform Metrics</span>
-        <span className="flex items-center gap-1.5 text-[10px] text-emerald-400">
-          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-          Real-time
+        <span className={`flex items-center gap-1.5 text-[10px] ${connected ? 'text-emerald-400' : 'text-amber-400'}`}>
+          <span className={`inline-block h-1.5 w-1.5 rounded-full ${connected ? 'animate-pulse bg-emerald-400' : 'bg-amber-400'}`} />
+          {connected ? `Backend · ${secondsAgo}s ago` : 'Simulated'}
         </span>
       </div>
       <div className="mb-4 grid grid-cols-2 gap-3">
@@ -89,14 +120,14 @@ function LiveMetrics() {
         ))}
       </div>
       {[
-        { label: 'Urban Mobility', pct: 72, color: 'bg-blue-500' },
-        { label: 'Healthcare',     pct: 85, color: 'bg-emerald-500' },
-        { label: 'Environment',    pct: 61, color: 'bg-green-500' },
+        { label: 'Urban Mobility', pct: m.urban,       color: 'bg-blue-500' },
+        { label: 'Healthcare',     pct: m.healthcare,  color: 'bg-emerald-500' },
+        { label: 'Environment',    pct: m.environment, color: 'bg-green-500' },
       ].map(b => (
         <div key={b.label} className="mb-2 flex items-center gap-2">
           <span className="w-28 text-[10px] text-white/40">{b.label}</span>
           <div className="h-1 flex-1 rounded-full bg-white/10">
-            <div className={`h-full rounded-full ${b.color}`} style={{ width: `${b.pct}%` }} />
+            <div className={`h-full rounded-full transition-all duration-1000 ${b.color}`} style={{ width: `${b.pct}%` }} />
           </div>
           <span className="w-8 text-right font-mono text-[10px] text-white/50">{b.pct}</span>
         </div>
