@@ -1,4 +1,4 @@
-"""Agent orchestration layer — ADK-ready with enterprise extensions.
+"""Agent orchestration layer â€” ADK-ready with enterprise extensions.
 
 Designed for Google Agent Development Kit integration. When ADK is configured,
 swap `generate` implementation to delegate to ADK agents. MVP uses direct LLM calls.
@@ -24,7 +24,7 @@ class AgentOrchestrator:
         from openai import AsyncOpenAI
 
         settings = get_settings()
-        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        client = AsyncOpenAI(api_key=settings.openai_api_key, base_url=settings.openai_base_url or None)
         response = await client.chat.completions.create(
             model=settings.openai_model,
             messages=[

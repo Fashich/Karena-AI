@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     llm_provider: Literal["openai", "google", "mock"] = "mock"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+    openai_base_url: str = ""
     google_api_key: str = ""
     google_model: str = "gemini-2.0-flash"
 
