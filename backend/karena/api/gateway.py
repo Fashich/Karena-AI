@@ -59,6 +59,8 @@ class Permission(str, Enum):
     MANAGE_USERS = "manage:users"
     MANAGE_TENANTS = "manage:tenants"
     ACCESS_AUDIT_LOGS = "access:audit_logs"
+    MANAGE_MODELS = "manage:models"
+    MANAGE_API_KEYS = "manage:api_keys"
     CONFIGURE_SYSTEM = "configure:system"
     ESCALATE_QUERIES = "escalate:queries"
 

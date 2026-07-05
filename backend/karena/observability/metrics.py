@@ -74,6 +74,13 @@ CACHE_HIT_RATIO_GAUGE = Gauge(
 )
 
 
+def record_query(
+    tenant_id: str,
+    status: str,
+    latency_ms: float,
+    retrieved_count: int = 0,
+) -> None:
+    """Record a RAG query event."""
     QUERY_COUNTER.labels(tenant_id=tenant_id, status=status).inc()
     QUERY_LATENCY.observe(latency_ms / 1000)
     RETRIEVAL_COUNT.observe(retrieved_count)

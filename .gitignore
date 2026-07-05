@@ -92,3 +92,7 @@ app/.env
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+
+backend/.venv/**
+**/.venv/**
+**/.venv/

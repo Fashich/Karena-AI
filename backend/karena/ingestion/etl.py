@@ -1,4 +1,4 @@
-"""ETL pipeline: parse → chunk → embed → index."""
+"""ETL pipeline: parse â†’ chunk â†’ embed â†’ index."""
 
 import uuid
 from dataclasses import dataclass
@@ -70,7 +70,7 @@ async def ingest_document(
         return IngestionResult(source_id=source_id, chunks_indexed=0, title=doc_title)
 
     embeddings = get_embedding_service()
-    vectors = embeddings.embed_texts([c.text for c in chunks]).tolist()
+    raw = embeddings.embed_texts([c.text for c in chunks]); vectors = raw.tolist() if hasattr(raw, "tolist") else raw
 
     vector_store = get_vector_store()
     count = await vector_store.upsert_chunks(chunks, vectors)
