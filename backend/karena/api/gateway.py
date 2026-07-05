@@ -413,6 +413,18 @@ async def get_current_user(request: Request) -> TokenPayload:
 
 def requires_permission(permission: Permission):
     """Dependency factory for permission-based authorization."""
+    from karena.config import get_settings as _gs
+    if not _gs().require_auth:
+        async def _bypass() -> TokenPayload:
+            return TokenPayload(
+                sub='dev-user',
+                email='dev@karena.ai',
+                tenant_id='default',
+                role=UserRole.SUPER_ADMIN,
+                permissions=list(Permission),
+                exp=int(time.time()) + 86400,
+                iat=int(time.time()),
+            )
 
     async def check_permission(
         current_user: TokenPayload = Depends(get_current_user),

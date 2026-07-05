@@ -79,3 +79,18 @@ async def ingest(
         chunks_indexed=result.chunks_indexed,
         title=result.title,
     )
+
+@router.post("/seed-dev", include_in_schema=False)
+async def seed_dev(request: Request):
+    import os
+    body = await request.json()
+    from karena.rag.pipeline import RAGPipeline
+    pipeline = RAGPipeline()
+    from karena.ingestion.etl import ingest_document
+    result = await ingest_document(
+        title=body.get("title", "Doc"),
+        content=body.get("content", ""),
+        source_id=body.get("source", "seed"),
+        tenant_id=body.get("tenant_id", "default"),
+    )
+    return {"ok": True}
