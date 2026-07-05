@@ -53,6 +53,51 @@ const DOMAINS = [
   { id: 'energy_utilities', label: 'Energy & Utilities' },
 ];
 
+// ─── Sources list with collapse ──────────────────────────────
+function SourcesList({ sources }: { sources: SourceCitation[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const TOP = 3;
+  const visible = expanded ? sources : sources.slice(0, TOP);
+  const rest = sources.length - TOP;
+
+  return (
+    <div className="mt-3 space-y-1.5 text-left">
+      <p className="flex items-center gap-1 text-xs uppercase tracking-wider text-white/40">
+        <BookOpen className="h-3 w-3" />
+        Sources ({sources.length})
+      </p>
+      {visible.map((src) => (
+        <button
+          key={src.id}
+          type="button"
+          onClick={() => setOpenId(openId === src.id ? null : src.id)}
+          className="block w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left text-sm transition hover:border-white/20"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate font-medium text-white/80 text-xs">{src.title}</span>
+            <Badge variant="secondary" className="shrink-0 text-[10px]">
+              {(src.score * 100).toFixed(0)}%
+            </Badge>
+          </div>
+          {openId === src.id && src.excerpt && (
+            <p className="mt-1.5 text-[11px] leading-relaxed text-white/50">{src.excerpt}</p>
+          )}
+        </button>
+      ))}
+      {rest > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded(e => !e)}
+          className="text-xs text-white/30 hover:text-white/60 transition px-1"
+        >
+          {expanded ? '▲ Show less' : `▼ Show ${rest} more sources`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function Chat() {
   const location = useLocation();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -66,11 +111,16 @@ export default function Chat() {
   const [escalatingMessage, setEscalatingMessage] = useState<string | null>(null);
   const [progressStep, setProgressStep] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Domain mode
   const [domainMode, setDomainMode] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState<string>('urban_mobility');
+
+  // Web search
+  const [webSearch, setWebSearch] = useState(false);
 
   // Multimodal image
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -84,7 +134,9 @@ export default function Chat() {
   }, [location.state]);
 
   const scrollToBottom = useCallback(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = scrollContainerRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    setTimeout(() => inputRef.current?.focus(), 300);
   }, []);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,7 +227,7 @@ export default function Chat() {
           answer += '\n\n**Recommended Actions:**\n' + actions.map((a, i) => `${i + 1}. ${a}`).join('\n');
         }
       } else {
-        const res: ChatResponse = await sendChat(text, sessionId);
+        const res: ChatResponse = await sendChat(text, sessionId, webSearch);
         answer = res.answer;
         sources = res.sources;
         confidence = res.confidence;
@@ -339,6 +391,22 @@ export default function Chat() {
           </button>
         </div>
 
+        {/* Web search toggle */}
+        <button
+          type="button"
+          onClick={() => setWebSearch(w => !w)}
+          title="Toggle web search"
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition',
+            webSearch
+              ? 'border-blue-500/50 bg-blue-500/15 text-blue-400'
+              : 'border-white/10 bg-white/5 text-white/40 hover:text-white/70',
+          )}
+        >
+          <span className="text-xs">??</span>
+          {webSearch ? 'Web ON' : 'Web'}
+        </button>
+
         {/* Domain selector (visible in domain mode) */}
         {domainMode && (
           <select
@@ -378,7 +446,10 @@ export default function Chat() {
         </div>
       </header>
 
-      <ScrollArea className="flex-1 px-4 md:px-8">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto px-4 md:px-8"
+      >
         <div className="mx-auto max-w-3xl py-8">
           {messages.length === 0 && (
             <div className="mb-12 text-center">
@@ -501,36 +572,7 @@ export default function Chat() {
               </div>
 
               {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-3 space-y-2 text-left">
-                  <p className="flex items-center gap-1 text-xs uppercase tracking-wider text-white/40">
-                    <BookOpen className="h-3 w-3" />
-                    Sources ({msg.sources.length})
-                  </p>
-                  {msg.sources.map((src) => (
-                    <button
-                      key={src.id}
-                      type="button"
-                      onClick={() =>
-                        setExpandedSource(
-                          expandedSource === src.id ? null : src.id
-                        )
-                      }
-                      className="block w-full rounded-lg border border-white/10 bg-white/5 p-3 text-left text-sm transition hover:border-white/20"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-white/90">
-                          {src.title}
-                        </span>
-                        <Badge variant="secondary" className="text-xs">
-                          {(src.score * 100).toFixed(0)}%
-                        </Badge>
-                      </div>
-                      {expandedSource === src.id && (
-                        <p className="mt-2 text-white/60">{src.excerpt}</p>
-                      )}
-                    </button>
-                  ))}
-                </div>
+                <SourcesList sources={msg.sources} />
               )}
             </div>
           ))}
@@ -541,13 +583,13 @@ export default function Chat() {
               {progressStep ?? 'Retrieving and synthesizing...'}
             </div>
           )}
-          <div ref={bottomRef} />
+          <div ref={bottomRef} className="h-4" />
         </div>
-      </ScrollArea>
+      </div>
 
       <form
         onSubmit={handleSubmit}
-        className="border-t border-white/10 p-4 md:px-8"
+        className="shrink-0 border-t border-white/10 p-4 md:px-8"
       >
         <div className="mx-auto max-w-3xl space-y-2">
           {/* Image preview */}
@@ -594,6 +636,7 @@ export default function Chat() {
             </Button>
 
             <Textarea
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -637,3 +680,8 @@ export default function Chat() {
     </div>
   );
 }
+
+
+
+
+

@@ -193,7 +193,7 @@ export async function sendChat(
 }
 
 export async function fetchAdminStats(): Promise<AdminStats> {
-  const res = await fetch(`${API_BASE}/stats`);
+  const res = await fetch(`${API_BASE}/admin/stats`);
   if (!res.ok) throw new Error('Failed to load admin stats');
   return res.json();
 }
@@ -253,4 +253,3 @@ export async function createEscalation(params: {
   }
   return res.json();
 }
-

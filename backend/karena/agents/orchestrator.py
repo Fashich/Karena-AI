@@ -1,4 +1,4 @@
-"""Agent orchestration layer â€” ADK-ready with enterprise extensions.
+"""Agent orchestration layer — ADK-ready with enterprise extensions.
 
 Designed for Google Agent Development Kit integration. When ADK is configured,
 swap `generate` implementation to delegate to ADK agents. MVP uses direct LLM calls.
@@ -10,8 +10,21 @@ from karena.config import get_settings
 class AgentOrchestrator:
     """Primary orchestrator: intent routing, retrieval delegation, synthesis."""
 
-    async def generate(self, prompt: str, question: str) -> tuple[str, float]:
+    async def generate(self, prompt: str, question: str, web_search: bool = False) -> tuple[str, float]:
         settings = get_settings()
+
+        # ── Web search augmentation ───────────────────────────
+        if web_search:
+            try:
+                from karena.search.web_search import get_web_search
+                svc = get_web_search()
+                web_results = await svc.search(question, max_results=4)
+                if web_results:
+                    web_context = svc.format_for_llm(web_results, question)
+                    prompt = web_context + "\n\nKNOWLEDGE BASE CONTEXT:\n" + prompt
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning("Web search failed: %s", e)
 
         if settings.llm_provider == "openai" and settings.openai_api_key:
             return await self._generate_openai(prompt)
@@ -24,7 +37,7 @@ class AgentOrchestrator:
         from openai import AsyncOpenAI
 
         settings = get_settings()
-        client = AsyncOpenAI(api_key=settings.openai_api_key, base_url=settings.openai_base_url or None)
+        client = AsyncOpenAI(api_key=settings.openai_api_key, base_url=settings.openai_base_url or "https://api.groq.com/openai/v1")
         response = await client.chat.completions.create(
             model=settings.openai_model,
             messages=[

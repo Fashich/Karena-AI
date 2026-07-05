@@ -39,3 +39,7 @@ passlib[bcrypt]>=1.7.4
 # LLM providers (optional — configure via env)
 openai>=1.55.0
 google-genai>=1.0.0
+
+pytesseract
+pdf2image
+Pillow

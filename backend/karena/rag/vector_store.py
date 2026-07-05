@@ -48,7 +48,7 @@ class QdrantVectorStore:
         settings = get_settings()
         # Don't pass `check_compatibility` to avoid passing unexpected kwargs
         # down into httpx for older client/server combinations.
-        self.client = AsyncQdrantClient(url=settings.qdrant_url)
+        self.client = AsyncQdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None)
         self.collection = settings.qdrant_collection
         self.dimension = settings.embedding_dim
 
@@ -63,6 +63,20 @@ class QdrantVectorStore:
                     distance=self._qmodels.Distance.COSINE,
                 ),
             )
+        # Always ensure payload indexes exist (idempotent)
+        try:
+            await self.client.create_payload_index(
+                collection_name=self.collection,
+                field_name="tenant_id",
+                field_schema=self._qmodels.PayloadSchemaType.KEYWORD,
+            )
+            await self.client.create_payload_index(
+                collection_name=self.collection,
+                field_name="source_id",
+                field_schema=self._qmodels.PayloadSchemaType.KEYWORD,
+            )
+        except Exception:
+            pass  # Index already exists
 
     async def upsert_chunks(
         self,

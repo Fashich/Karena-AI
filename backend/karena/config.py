@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     # Qdrant (when vector_store=qdrant)
     qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str = ""
     qdrant_collection: str = "karena_knowledge"
     embedding_dim: int = 384  # all-MiniLM-L6-v2
 
@@ -55,7 +56,7 @@ class Settings(BaseSettings):
     llm_provider: Literal["openai", "google", "mock"] = "mock"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
-    openai_base_url: str = ""
+    openai_base_url: str = "https://api.groq.com/openai/v1"
     google_api_key: str = ""
     google_model: str = "gemini-2.0-flash"
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router';
 import {
   Activity,
@@ -17,6 +17,9 @@ export default function Admin() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [health, setHealth] = useState<Record<string, unknown> | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [uploadSeconds, setUploadSeconds] = useState(0);
+  const uploadTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
@@ -40,13 +43,54 @@ export default function Admin() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setUploadSeconds(0);
+    setUploadProgress('Uploading...');
+
+    // Timer for elapsed seconds
+    uploadTimerRef.current = setInterval(() => {
+      setUploadSeconds(s => s + 1);
+    }, 1000);
+
     try {
-      await uploadDocument(file);
-      await load();
+      // Upload — backend returns job_id immediately
+      const API = import.meta.env.VITE_API_URL || '/api/v1';
+      const form = new FormData();
+      form.append('file', file);
+      if (file.name) form.append('title', file.name);
+
+      const uploadRes = await fetch(`${API}/ingest`, { method: 'POST', body: form });
+      if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}`);
+      const { job_id } = await uploadRes.json();
+
+      // Poll progress every 500ms
+      let done = false;
+      while (!done) {
+        await new Promise(r => setTimeout(r, 500));
+        const progRes = await fetch(`${API}/ingest/progress/${job_id}`);
+        if (!progRes.ok) break;
+        const prog = await progRes.json();
+
+        // Update UI
+        setUploadProgress(prog.message || 'Processing...');
+
+        if (prog.status === 'done') {
+          setUploadProgress(`✅ Indexed ${prog.chunks_indexed} chunks from ${prog.total_pages || '?'} pages!`);
+          done = true;
+          setTimeout(() => { setUploadProgress(null); setUploading(false); }, 3000);
+          await load();
+        } else if (prog.status === 'error') {
+          setError(prog.error || 'Ingestion failed');
+          done = true;
+          setUploadProgress(null);
+          setUploading(false);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
-    } finally {
+      setUploadProgress(null);
       setUploading(false);
+    } finally {
+      if (uploadTimerRef.current) clearInterval(uploadTimerRef.current);
     }
   };
 
@@ -247,7 +291,18 @@ export default function Admin() {
                 className="border-white/15 bg-white/5"
               />
               <Upload className="h-5 w-5 text-white/50" />
-              {uploading ? 'Indexing...' : 'Upload PDF, DOCX, or text'}
+              {uploading ? (
+                <div className="text-left w-full">
+                  <div className="text-sm font-medium text-white/80 mb-1">{uploadProgress}</div>
+                  <div className="text-xs text-white/40 mb-2">{uploadSeconds}s elapsed</div>
+                  <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-blue-500 transition-all duration-500"
+                      style={{ width: uploading ? `${Math.min(uploadSeconds * 3, 90)}%` : '100%' }}
+                    />
+                  </div>
+                </div>
+              ) : 'Upload PDF, DOCX, or text'}
             </label>
           </CardContent>
         </Card>

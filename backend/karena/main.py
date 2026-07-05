@@ -1,29 +1,3 @@
-
-async def _auto_seed():
-    try:
-        from karena.ingestion.etl import ingest_document
-        docs = [
-            ("Karena AI Reference Architecture", "architecture-doc",
-             "Karena AI is a Community Decision Intelligence Platform built on hybrid RAG (dense HNSW + BM25), FastAPI backend, React 19 frontend, and 7 specialist domain agents (Urban Mobility, Healthcare, Environment, Citizen Services, Disaster Response, Education, Energy). Uses Groq LLaMA, multi-tenant RBAC, PII detection, OpenTelemetry observability."),
-            ("APAC Data Governance Policy", "data-governance",
-             "APAC data retention policy requires minimum 7 years per PDPA Singapore, GDPR. PII encrypted at rest and in transit. Data localization in Indonesia GR 71/2019, Malaysia PDPA 2010, Thailand PDPA 2019. Cross-border transfers need explicit consent and DPA."),
-            ("Community Decision Intelligence Domains", "domain-guide",
-             "7 domains: Urban Mobility traffic and transit, Healthcare capacity and vaccination, Environment AQI and carbon, Citizen Services requests and resolution, Disaster Response early warning and recovery, Education enrollment and outcomes, Energy and Utilities grid and renewables. Each has specialist AI agents."),
-            ("Support Escalation Playbook", "escalation-playbook",
-             "Tier 1 general queries via AI assistant. Escalate Tier 2 when confidence below 60 percent or compliance issues. Tier 3 for security incidents. SLA: Tier 1 equals 2 hours, Tier 2 equals 4 hours, Tier 3 equals 1 hour."),
-        ]
-        for title, source, content_text in docs:
-            await ingest_document(
-                filename=source + ".txt",
-                content=content_text.encode("utf-8"),
-                title=title,
-                tenant_id="default",
-            )
-        import logging
-        logging.getLogger(__name__).info("Auto-seed complete: %d documents", len(docs))
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning("Auto-seed failed: %s", e)
 """FastAPI application entry point."""
 
 from contextlib import asynccontextmanager
@@ -33,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from karena.api.routes import admin, auth, chat, compliance, escalation, health, ingest, tracing
 from karena.api.routes import analytics as analytics_router
+from karena.api.routes import search as search_router
 from karena.api.routes import multimodal as multimodal_router
 from karena.api.gateway import get_gateway
 from karena.config import get_settings
@@ -50,7 +25,6 @@ async def lifespan(app: FastAPI):
     await init_db()
     vector_store = get_vector_store()
     await vector_store.ensure_collection()
-    await _auto_seed()
     get_embedding_service()  # warm model load
 
     if settings.oauth2_provider and settings.oauth2_client_id:
@@ -129,6 +103,7 @@ def create_app() -> FastAPI:
     # Community Decision Intelligence (hackathon extensions)
     app.include_router(analytics_router.router, prefix=prefix, tags=["analytics"])
     app.include_router(multimodal_router.router, prefix=prefix, tags=["multimodal"])
+    app.include_router(search_router.router, prefix=prefix, tags=["web-search"])
 
     setup_metrics(app)
     return app
