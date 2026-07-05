@@ -96,3 +96,10 @@ app/.env
 backend/.venv/**
 **/.venv/**
 **/.venv/
+
+# Explicit env files
+*.env
+!*.env.example
+backend/.env
+app/.env
+.env
