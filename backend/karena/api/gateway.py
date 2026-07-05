@@ -58,6 +58,8 @@ class Permission(str, Enum):
     VIEW_ANALYTICS = "view:analytics"
     MANAGE_USERS = "manage:users"
     MANAGE_TENANTS = "manage:tenants"
+    MANAGE_MODELS = "manage:models"
+    MANAGE_API_KEYS = "manage:api_keys"
     ACCESS_AUDIT_LOGS = "access:audit_logs"
     CONFIGURE_SYSTEM = "configure:system"
     ESCALATE_QUERIES = "escalate:queries"
@@ -85,6 +87,8 @@ ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
         Permission.UPLOAD_DOCUMENTS,
         Permission.VIEW_ANALYTICS,
         Permission.MANAGE_USERS,
+        Permission.MANAGE_MODELS,
+        Permission.MANAGE_API_KEYS,
         Permission.CONFIGURE_SYSTEM,
     },
     UserRole.CTO: {
@@ -92,6 +96,7 @@ ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
         Permission.VIEW_ANALYTICS,
         Permission.ACCESS_AUDIT_LOGS,
         Permission.MANAGE_TENANTS,
+        Permission.MANAGE_MODELS,
     },
     UserRole.SUPER_ADMIN: set(Permission),  # All permissions
 }
