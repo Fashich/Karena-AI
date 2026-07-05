@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     openai_base_url: str = "https://api.groq.com/openai/v1"
+    tavily_api_key: str = ""
     google_api_key: str = ""
     google_model: str = "gemini-2.0-flash"
 

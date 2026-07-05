@@ -16,8 +16,9 @@ class AgentOrchestrator:
         # ── Web search augmentation ───────────────────────────
         if web_search:
             try:
-                from karena.search.web_search import get_web_search
-                svc = get_web_search()
+                from karena.search.web_search import WebSearchService
+                from karena.config import get_settings as _gs2
+                svc = WebSearchService(tavily_api_key=_gs2().tavily_api_key)
                 web_results = await svc.search(question, max_results=4)
                 if web_results:
                     web_context = svc.format_for_llm(web_results, question)

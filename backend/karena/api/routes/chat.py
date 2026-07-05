@@ -80,6 +80,20 @@ async def chat(
     elif pii_result.masked_content and pii_result.recommended_action in {"redact", "block_or_redact"}:
         message = pii_result.masked_content
 
+    # ── Web search augmentation ───────────────────────────────
+    web_search_enabled = getattr(request_body, "web_search", False)
+    if web_search_enabled:
+        try:
+            from karena.search.web_search import WebSearchService
+            svc = WebSearchService(tavily_api_key=settings.tavily_api_key)
+            web_results = await svc.search(message, max_results=4)
+            if web_results:
+                web_context = svc.format_for_llm(web_results, message)
+                message = web_context + "\n\nUser question: " + message
+        except Exception as _web_err:
+            import logging
+            logging.getLogger(__name__).warning("Web search failed: %s", _web_err)
+
     try:
         result = await get_pipeline().query(
             message,
@@ -126,6 +140,7 @@ async def chat(
             "latency_ms": result.latency_ms,
             "sources": len(result.sources),
             "trace_id": result.trace.get("trace_id"),
+            "web_search": web_search_enabled,
         },
         source_ip=source_ip,
         user_agent=user_agent,

@@ -8,6 +8,7 @@ class ChatRequest(BaseModel):
     session_id: str | None = None
     tenant_id: str | None = None
     user_id: str = "anonymous"
+    web_search: bool = False
 
 
 class SourceCitation(BaseModel):
