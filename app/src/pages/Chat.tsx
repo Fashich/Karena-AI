@@ -1,13 +1,17 @@
-import { useCallback, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { useCallback, useRef, useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router';
 import {
   ArrowUp,
   BookOpen,
+  Camera,
   Download,
   Headphones,
   Loader2,
   ThumbsDown,
   ThumbsUp,
+  X,
+  LayoutDashboard,
+  Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,10 +19,14 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   sendChat,
+  sendDomainQuery,
+  analyzeImage,
   createEscalation,
   submitFeedback,
   type ChatResponse,
   type SourceCitation,
+  type DomainQueryResponse,
+  type MultimodalAnalysisResponse,
 } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -32,9 +40,21 @@ interface Message {
   question?: string;
   escalationTicket?: string;
   escalationError?: string;
+  isImageAnalysis?: boolean;
 }
 
+const DOMAINS = [
+  { id: 'urban_mobility', label: 'Urban Mobility' },
+  { id: 'healthcare', label: 'Healthcare' },
+  { id: 'environment', label: 'Environment' },
+  { id: 'citizen_services', label: 'Citizen Services' },
+  { id: 'disaster_response', label: 'Disaster Response' },
+  { id: 'education', label: 'Education' },
+  { id: 'energy_utilities', label: 'Energy & Utilities' },
+];
+
 export default function Chat() {
+  const location = useLocation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -46,41 +66,133 @@ export default function Chat() {
   const [escalatingMessage, setEscalatingMessage] = useState<string | null>(null);
   const [progressStep, setProgressStep] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Domain mode
+  const [domainMode, setDomainMode] = useState(false);
+  const [selectedDomain, setSelectedDomain] = useState<string>('urban_mobility');
+
+  // Multimodal image
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageAnalyzing, setImageAnalyzing] = useState(false);
+
+  // Pre-fill from navigation state (e.g. Dashboard "Ask AI" button)
+  useEffect(() => {
+    const state = location.state as { prefill?: string } | null;
+    if (state?.prefill) setInput(state.prefill);
+  }, [location.state]);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const text = input.trim();
-    if (!text || loading) return;
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
 
+  const clearImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleImageAnalyze = async () => {
+    if (!imageFile || imageAnalyzing) return;
+    setImageAnalyzing(true);
+    const context = input.trim() || 'Analyze this image for community impact and decision-making insights.';
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: text,
+      content: `📷 Image analysis request: "${context}"`,
     };
+    setMessages((prev) => [...prev, userMsg]);
+
+    try {
+      const res: MultimodalAnalysisResponse = await analyzeImage(imageFile, context, selectedDomain);
+      const actions = res.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n');
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `${res.analysis}\n\n**Recommended Actions:**\n${actions}`,
+          confidence: res.confidence > 0 ? res.confidence : undefined,
+        },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: 'assistant', content: `Image analysis error: ${err instanceof Error ? err.message : 'Failed'}` },
+      ]);
+    } finally {
+      setImageAnalyzing(false);
+      clearImage();
+      setInput('');
+      setTimeout(scrollToBottom, 100);
+    }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (imageFile) { handleImageAnalyze(); return; }
+    const text = input.trim();
+    if (!text || loading) return;
+
+    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: text };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
     setProgressStep('Classifying intent and tenant context');
 
     try {
-      setTimeout(() => setProgressStep('Retrieving dense and lexical matches'), 250);
-      setTimeout(() => setProgressStep('Re-ranking sources and assembling citations'), 700);
-      setTimeout(() => setProgressStep('Generating grounded answer'), 1100);
-      const res: ChatResponse = await sendChat(text, sessionId);
-      setSessionId(res.session_id);
+      setTimeout(() => setProgressStep('Routing to domain specialist agent'), 200);
+      setTimeout(() => setProgressStep('Retrieving dense and lexical matches'), 500);
+      setTimeout(() => setProgressStep('Re-ranking sources and assembling citations'), 900);
+      setTimeout(() => setProgressStep('Generating grounded answer with domain context'), 1300);
+
+      let answer: string;
+      let sources: SourceCitation[] = [];
+      let confidence: number | undefined;
+      let latency_ms: number | undefined;
+      let newSessionId: string | undefined;
+      let actions: string[] | undefined;
+
+      if (domainMode) {
+        const res: DomainQueryResponse = await sendDomainQuery(text, selectedDomain, sessionId);
+        answer = res.answer;
+        sources = res.sources;
+        confidence = res.confidence;
+        latency_ms = res.latency_ms;
+        newSessionId = res.session_id;
+        if (res.recommended_actions?.length) {
+          actions = res.recommended_actions;
+          answer += '\n\n**Recommended Actions:**\n' + actions.map((a, i) => `${i + 1}. ${a}`).join('\n');
+        }
+      } else {
+        const res: ChatResponse = await sendChat(text, sessionId);
+        answer = res.answer;
+        sources = res.sources;
+        confidence = res.confidence;
+        latency_ms = res.latency_ms;
+        newSessionId = res.session_id;
+      }
+
+      if (newSessionId) setSessionId(newSessionId);
       setMessages((prev) => [
         ...prev,
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: res.answer,
-          sources: res.sources,
-          confidence: res.confidence,
-          latency_ms: res.latency_ms,
+          content: answer,
+          sources,
+          confidence,
+          latency_ms,
           question: text,
         },
       ]);
@@ -91,7 +203,7 @@ export default function Chat() {
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: `Error: ${err instanceof Error ? err.message : 'Request failed'}. Ensure the backend is running on port 8000.`,
+          content: `Error: ${err instanceof Error ? err.message : 'Request failed'}. Ensure the backend is running.`,
         },
       ]);
     } finally {
@@ -100,11 +212,17 @@ export default function Chat() {
     }
   };
 
-  const suggestions = [
-    'What is our APAC data retention policy?',
-    'Describe the Karena AI reference architecture',
-    'When should support queries be escalated?',
-  ];
+  const suggestions = domainMode
+    ? [
+        `What are the key challenges in ${DOMAINS.find(d => d.id === selectedDomain)?.label ?? 'this domain'}?`,
+        `How can AI improve decision-making in ${DOMAINS.find(d => d.id === selectedDomain)?.label ?? 'this area'}?`,
+        'What data-driven interventions are most effective?',
+      ]
+    : [
+        'What is our APAC data retention policy?',
+        'Describe the Karena AI reference architecture',
+        'When should support queries be escalated?',
+      ];
 
   const handleFeedback = async (messageId: string, rating: -1 | 1) => {
     if (!sessionId) return;
@@ -192,16 +310,68 @@ export default function Chat() {
 
   return (
     <div className="flex h-screen flex-col bg-[#0a0a0f] text-white">
-      <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-        <Link to="/" className="font-display text-lg font-medium tracking-tight">
+      <header className="flex items-center justify-between border-b border-white/10 px-4 py-3 gap-2 flex-wrap">
+        <Link to="/" className="font-display text-base font-medium tracking-tight shrink-0">
           KARENA AI
         </Link>
-        <div className="flex items-center gap-4">
-          <Badge variant="outline" className="border-emerald-500/50 text-emerald-400">
+
+        {/* Domain mode toggle */}
+        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
+          <button
+            type="button"
+            onClick={() => setDomainMode(false)}
+            className={cn(
+              'rounded-md px-3 py-1 text-xs font-medium transition',
+              !domainMode ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/70',
+            )}
+          >
+            General
+          </button>
+          <button
+            type="button"
+            onClick={() => setDomainMode(true)}
+            className={cn(
+              'rounded-md px-3 py-1 text-xs font-medium transition',
+              domainMode ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/70',
+            )}
+          >
+            Domain AI
+          </button>
+        </div>
+
+        {/* Domain selector (visible in domain mode) */}
+        {domainMode && (
+          <select
+            value={selectedDomain}
+            onChange={(e) => setSelectedDomain(e.target.value)}
+            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/80 focus:outline-none"
+          >
+            {DOMAINS.map((d) => (
+              <option key={d.id} value={d.id} className="bg-gray-900">
+                {d.label}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <div className="flex items-center gap-2 ml-auto">
+          {domainMode && (
+            <Badge variant="outline" className="border-purple-500/50 text-purple-400 text-xs">
+              <Layers className="mr-1 h-3 w-3" />
+              {DOMAINS.find(d => d.id === selectedDomain)?.label}
+            </Badge>
+          )}
+          <Badge variant="outline" className="border-emerald-500/50 text-emerald-400 text-xs">
             RAG Active
           </Badge>
+          <Link to="/dashboard">
+            <Button variant="ghost" size="sm" className="text-white/60 h-7 px-2 text-xs">
+              <LayoutDashboard className="h-3.5 w-3.5 mr-1" />
+              Dashboard
+            </Button>
+          </Link>
           <Link to="/admin">
-            <Button variant="ghost" size="sm" className="text-white/70">
+            <Button variant="ghost" size="sm" className="text-white/60 h-7 px-2 text-xs">
               Admin
             </Button>
           </Link>
@@ -213,20 +383,26 @@ export default function Chat() {
           {messages.length === 0 && (
             <div className="mb-12 text-center">
               <h1 className="font-display mb-3 text-3xl font-medium">
-                Enterprise Knowledge Assistant
+                {domainMode
+                  ? `${DOMAINS.find(d => d.id === selectedDomain)?.label} AI Assistant`
+                  : 'Community Decision Assistant'}
               </h1>
-              <p className="mb-8 text-white/60">
-                Ask questions across your unified knowledge base. Responses include
-                source citations and confidence indicators.
+              <p className="mb-2 text-white/60">
+                {domainMode
+                  ? `Domain-specialist AI for ${DOMAINS.find(d => d.id === selectedDomain)?.label.toLowerCase()}. Ask questions, get insights, and receive data-driven recommendations.`
+                  : 'Ask questions across your unified knowledge base. Upload images for AI-powered visual analysis.'}
               </p>
-              <div className="flex flex-wrap justify-center gap-2">
+              {domainMode && (
+                <p className="mb-6 text-xs text-purple-400/70">
+                  Powered by RAG + multi-agent orchestration · Google ADK-ready
+                </p>
+              )}
+              <div className="flex flex-wrap justify-center gap-2 mt-6">
                 {suggestions.map((s) => (
                   <button
                     key={s}
                     type="button"
-                    onClick={() => {
-                      setInput(s);
-                    }}
+                    onClick={() => setInput(s)}
                     className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/80 transition hover:border-white/30 hover:bg-white/5"
                   >
                     {s}
@@ -373,28 +549,89 @@ export default function Chat() {
         onSubmit={handleSubmit}
         className="border-t border-white/10 p-4 md:px-8"
       >
-        <div className="mx-auto flex max-w-3xl gap-3">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
+        <div className="mx-auto max-w-3xl space-y-2">
+          {/* Image preview */}
+          {imagePreview && (
+            <div className="relative inline-block">
+              <img
+                src={imagePreview}
+                alt="Selected"
+                className="h-20 w-auto rounded-lg border border-white/20 object-cover"
+              />
+              <button
+                type="button"
+                onClick={clearImage}
+                className="absolute -right-2 -top-2 rounded-full bg-gray-800 p-0.5 text-white/70 hover:text-white"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <Badge className="absolute bottom-1 left-1 text-[9px] bg-black/70">
+                {imageFile?.name?.slice(0, 20)}
+              </Badge>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageSelect}
+            />
+
+            {/* Image upload button */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              className="h-[52px] w-[52px] shrink-0 rounded-xl border border-white/15 text-white/50 hover:text-white/80"
+              title="Upload image for analysis"
+            >
+              <Camera className="h-5 w-5" />
+            </Button>
+
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              placeholder={
+                imageFile
+                  ? 'Add context for image analysis (optional)…'
+                  : domainMode
+                  ? `Ask about ${DOMAINS.find(d => d.id === selectedDomain)?.label ?? 'this domain'}…`
+                  : 'Ask about policies, architecture, compliance…'
               }
-            }}
-            placeholder="Ask about policies, architecture, compliance..."
-            className="min-h-[52px] resize-none border-white/15 bg-white/5 text-white placeholder:text-white/40"
-            rows={1}
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={loading || !input.trim()}
-            className="h-[52px] w-[52px] shrink-0 rounded-xl"
-          >
-            <ArrowUp className="h-5 w-5" />
-          </Button>
+              className="min-h-[52px] resize-none border-white/15 bg-white/5 text-white placeholder:text-white/40"
+              rows={1}
+            />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={(loading || imageAnalyzing) || (!input.trim() && !imageFile)}
+              className="h-[52px] w-[52px] shrink-0 rounded-xl"
+            >
+              {loading || imageAnalyzing
+                ? <Loader2 className="h-5 w-5 animate-spin" />
+                : <ArrowUp className="h-5 w-5" />
+              }
+            </Button>
+          </div>
+
+          <p className="text-center text-[10px] text-white/25">
+            {imageFile
+              ? '📷 Image ready — click Send to analyze with Gemini Vision'
+              : domainMode
+              ? `🤖 Domain AI: ${DOMAINS.find(d => d.id === selectedDomain)?.label} · Powered by RAG + multi-agent`
+              : 'Knowledge base RAG · Source citations included · Escalation available'}
+          </p>
         </div>
       </form>
     </div>

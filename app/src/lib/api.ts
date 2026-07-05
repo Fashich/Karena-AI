@@ -1,5 +1,114 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 
+// ─── Analytics & Decision Intelligence ─────────────────────────
+
+export interface DomainInsight {
+  domain: string;
+  title: string;
+  body: string;
+  impact: 'high' | 'medium' | 'low';
+  urgency: string;
+  metric_snapshot: Record<string, number>;
+  generated_at: string;
+}
+
+export interface ForecastResult {
+  domain: string;
+  metric: string;
+  historical: Array<{ day: string; value: number }>;
+  forecast: Array<{ day: string; value: number }>;
+  trend: 'increasing' | 'decreasing' | 'stable';
+  trend_slope: number;
+  confidence_interval: number;
+  r_squared: number;
+  summary: string;
+}
+
+export interface DomainQueryResponse {
+  answer: string;
+  domain: string;
+  domain_label: string;
+  sources: SourceCitation[];
+  confidence: number;
+  session_id: string;
+  latency_ms: number;
+  recommended_actions: string[];
+  community_insights: DomainInsight[];
+  escalate_to_human: boolean;
+}
+
+export interface MultimodalAnalysisResponse {
+  analysis: string;
+  domain: string;
+  structured_findings: {
+    severity: string;
+    key_observations: string[];
+    estimated_impact: string;
+    domain_relevance: string;
+  };
+  recommendations: string[];
+  confidence: number;
+  model_used: string;
+  supports_multimodal: boolean;
+}
+
+export async function fetchDomains(): Promise<{ domains: unknown[]; total: number }> {
+  const res = await fetch(`${API_BASE}/analytics/domains`);
+  if (!res.ok) throw new Error('Failed to fetch domains');
+  return res.json();
+}
+
+export async function fetchDomainInsights(domain: string): Promise<{ domain: string; insights: DomainInsight[]; metric_snapshot: Record<string, number> }> {
+  const res = await fetch(`${API_BASE}/analytics/insights/${domain}`);
+  if (!res.ok) throw new Error('Failed to fetch insights');
+  return res.json();
+}
+
+export async function sendDomainQuery(
+  query: string,
+  domain?: string,
+  sessionId?: string,
+): Promise<DomainQueryResponse> {
+  const res = await fetch(`${API_BASE}/analytics/query`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, domain, session_id: sessionId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Domain query failed');
+  }
+  return res.json();
+}
+
+export async function analyzeImage(
+  file: File,
+  context: string,
+  domain: string,
+): Promise<MultimodalAnalysisResponse> {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('context', context);
+  form.append('domain', domain);
+  const res = await fetch(`${API_BASE}/analyze/image`, { method: 'POST', body: form });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Image analysis failed');
+  }
+  return res.json();
+}
+
+export async function checkMultimodalStatus(): Promise<{
+  multimodal_enabled: boolean;
+  provider: string;
+  model: string;
+  message: string;
+}> {
+  const res = await fetch(`${API_BASE}/analyze/status`);
+  if (!res.ok) throw new Error('Status check failed');
+  return res.json();
+}
+
 export interface SourceCitation {
   id: string;
   title: string;

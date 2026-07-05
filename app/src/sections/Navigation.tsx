@@ -56,6 +56,14 @@ export default function Navigation({ variant = 'default' }: NavigationProps) {
       <div className="flex items-center gap-3">
         {variant === 'landing' && (
           <Link
+            to="/dashboard"
+            className="glass-pill text-white text-xs uppercase tracking-widest hover:bg-white/15 transition-colors"
+          >
+            Dashboard
+          </Link>
+        )}
+        {variant === 'landing' && (
+          <Link
             to="/chat"
             className="glass-pill text-white text-xs uppercase tracking-widest hover:bg-white/15 transition-colors"
           >
