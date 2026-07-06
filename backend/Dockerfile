@@ -1,30 +1,33 @@
-# No apt-get / build-essential — avoids deb.debian.org failures and 20+ min GCC downloads.
-# All deps install from pre-built PyPI wheels only.
-FROM python:3.12-slim-bookworm
+# Hugging Face Spaces — KarenaAI Backend
+# Port 7860 (HF default)
+FROM python:3.11-slim
 
 WORKDIR /app
 
-ENV PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_DEFAULT_TIMEOUT=300 \
-    HF_HOME=/app/.cache/huggingface \
-    PYTHONUNBUFFERED=1
+# System dependencies (no Tesseract — use pypdf text extraction only)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --upgrade pip
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
-
-COPY requirements-docker.txt .
-RUN pip install -r requirements-docker.txt
-
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
-
+# Copy app
 COPY . .
-RUN mkdir -p /app/data
 
-EXPOSE 8080
+# Create required directories
+RUN mkdir -p /tmp/data
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=5 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/v1/health', timeout=5)" || exit 1
+# HF Spaces environment
+ENV PORT=7860
+ENV HOST=0.0.0.0
+ENV ENVIRONMENT=production
+ENV DATABASE_URL=sqlite+aiosqlite:////tmp/karena.db
+ENV AUDIT_DB_PATH=/tmp/audit.db
 
-CMD ["uvicorn", "karena.main:app", "--host", "0.0.0.0", "--port", "8080"]
+EXPOSE 7860
+
+CMD ["python", "run.py"]

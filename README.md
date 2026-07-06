@@ -119,6 +119,230 @@ Modern APAC communities generate massive volumes of structured and unstructured 
 
 ---
 
+## 🔄 System Flow Diagram
+
+```mermaid
+flowchart TD
+    subgraph USER["👤 USER LAYER"]
+        U1[City Stakeholder / Planner]
+        U2[Community Manager]
+        U3[Emergency Responder]
+        U4[Platform Administrator]
+    end
+
+    subgraph FRONTEND["🖥️ FRONTEND — React 19 + TypeScript"]
+        F2[Decision Dashboard\n7 Domain Tabs + Live KPIs]
+        F3[AI Chat Interface\nNatural Language Query]
+        F4[Admin Panel\nDocument Ingestion + Stats]
+        F5[Image Upload\nMultimodal Analysis]
+    end
+
+    subgraph GATEWAY["🔐 API GATEWAY — FastAPI"]
+        G1[Authentication\nOAuth2 / JWT / OIDC]
+        G2[Rate Limiting\nToken Bucket]
+        G3[PII Scanner\nGDPR / PDPA / HIPAA]
+        G4[DLP Layer\nData Loss Prevention]
+        G5[Audit Logger\nImmutable Logs]
+        G6[RBAC Enforcer\n6 Permission Roles]
+    end
+
+    subgraph ORCHESTRATOR["🧠 AGENT ORCHESTRATOR"]
+        O1[Intent Classifier]
+        O2[Domain Router]
+        O3[Query Expander\nSynonym + Context]
+        O4[Session Memory\nConversation Context]
+    end
+
+    subgraph AGENTS["🤖 DOMAIN SPECIALIST AGENTS"]
+        A1[🚗 Urban Mobility Agent\nTraffic · Transit · EV]
+        A2[🏥 Healthcare Agent\nBed Occupancy · Disease · Vaccine]
+        A3[🌿 Environment Agent\nAQI · Carbon · Water]
+        A4[👥 Citizen Services Agent\nRequests · Satisfaction · Digital]
+        A5[🚨 Disaster Response Agent\nEarly Warning · Resources · Recovery]
+        A6[📚 Education Agent\nEnrolment · Attendance · Outcomes]
+        A7[⚡ Energy & Utilities Agent\nGrid · Renewable · Smart Utility]
+    end
+
+    subgraph RAG["🔍 HYBRID RAG PIPELINE"]
+        R1[Dense Retrieval\nQdrant HNSW 384-dim]
+        R2[BM25 Lexical Retrieval\nKeyword Precision]
+        R3[Reciprocal Rank Fusion\nResult Merging]
+        R4[Cross-Encoder Re-Ranker\nStage 1 — Top 100 → Top 20]
+        R5[Learned-to-Rank\nStage 2 — Personalized]
+        R6[Context Packager\nSource Attribution + Citations]
+    end
+
+    subgraph SEARCH["🌐 WEB SEARCH"]
+        S1[Tavily API\nLLM-Optimised Search]
+        S2[DuckDuckGo Fallback\nNo Key Required]
+    end
+
+    subgraph LLM["💬 LLM & VISION LAYER"]
+        L1[Gemini 2.0 Flash\nText + Reasoning]
+        L2[Gemini Vision\nImage Analysis]
+        L3[Groq LLaMA 3.3 70B\nOpenAI-Compatible]
+        L4[Dynamic Prompt Engine\nTemplate + Few-Shot]
+    end
+
+    subgraph ANALYTICS["📊 ANALYTICS ENGINE"]
+        AN1[Time-Series Forecasting\nConfidence Intervals]
+        AN2[Anomaly Detection\nZ-Score + Severity]
+        AN3[Auto-Insight Generator\nPer-Domain Summaries]
+        AN4[Live Metrics Snapshot\n30s Polling]
+    end
+
+    subgraph INGESTION["📄 DOCUMENT INGESTION"]
+        I1[Document Parser\nPDF · DOCX · TXT]
+        I2[OCR Engine\nTesseract Page-by-Page]
+        I3[Adaptive Chunker\n512 tokens / 64 overlap]
+        I4[Embedding Generator\nall-MiniLM-L6-v2]
+        I5[Async Job Tracker\nProgress Polling]
+    end
+
+    subgraph STORAGE["🗄️ STORAGE LAYER"]
+        ST1[(Qdrant Cloud\nVector Store)]
+        ST2[(SQLite / Postgres\nMemory + Audit)]
+        ST3[(Redis Cache\nMulti-Tier)]
+    end
+
+    subgraph INFRA["☁️ INFRASTRUCTURE"]
+        IN1[Cloud Run / GKE\nTerraform Provisioned]
+        IN2[OpenTelemetry\nDistributed Tracing]
+        IN3[Prometheus + Grafana\nMetrics + Alerting]
+        IN4[GitHub Actions\nCI/CD Pipeline]
+    end
+
+    U1 & U2 & U3 --> F2 & F3 & F5
+    U4 --> F4
+
+    F2 & F3 & F4 & F5 --> G1
+    G1 --> G2 --> G3 --> G4 --> G5 --> G6
+
+    G6 --> O1 --> O2 --> O3
+    O2 --> O4
+
+    O2 --> A1 & A2 & A3 & A4 & A5 & A6 & A7
+
+    A1 & A2 & A3 & A4 & A5 & A6 & A7 --> R1 & R2
+    R1 & R2 --> R3 --> R4 --> R5 --> R6
+
+    R1 <--> ST1
+    R5 --> ST3
+
+    O3 --> S1 --> L4
+    S1 -- fallback --> S2 --> L4
+
+    R6 --> L4
+    L4 --> L1 & L3
+    F5 --> L2
+
+    L1 --> AN3
+    AN1 & AN2 & AN4 --> F2
+
+    F4 --> I1 --> I2 --> I3 --> I4 --> ST1
+    I5 <--> F4
+
+    G5 --> ST2
+    O4 <--> ST2
+
+    IN1 -.-> FRONTEND & GATEWAY & AGENTS & RAG
+    IN2 -.-> GATEWAY & AGENTS & RAG
+    IN3 -.-> IN2
+    IN4 -.-> IN1
+```
+
+---
+
+## 🎭 Use Case Diagram
+
+```mermaid
+graph LR
+    subgraph ACTORS["ACTORS"]
+        CK[👤 City Stakeholder]
+        CM[👥 Community Manager]
+        ER[🚨 Emergency Responder]
+        ADM[🔧 Platform Admin]
+        SYS[⚙️ System / Scheduler]
+    end
+
+    subgraph UC_CHAT["CONVERSATIONAL AI"]
+        UC1([Query Domain in Natural Language])
+        UC2([Receive AI-Generated Insight])
+        UC3([Toggle Real-Time Web Search])
+        UC4([View Source Citations])
+        UC5([Follow-Up Multi-Turn Conversation])
+    end
+
+    subgraph UC_DASH["DECISION DASHBOARD"]
+        UC6([View Live Domain KPIs])
+        UC7([Explore Domain Analytics Tab])
+        UC8([View Active Alert Feed])
+        UC9([Monitor Platform Uptime Status])
+    end
+
+    subgraph UC_ANALYTICS["PREDICTIVE ANALYTICS"]
+        UC10([Request Time-Series Forecast])
+        UC11([Detect Anomalies in Domain Data])
+        UC12([View Auto-Generated Domain Insights])
+        UC13([Set Confidence Interval Parameters])
+    end
+
+    subgraph UC_MULTIMODAL["MULTIMODAL ANALYSIS"]
+        UC14([Upload Infrastructure Image])
+        UC15([Receive Severity Assessment])
+        UC16([Get Recommended Response Actions])
+        UC17([Analyze Environmental Condition Photo])
+    end
+
+    subgraph UC_INGEST["DOCUMENT INTELLIGENCE"]
+        UC18([Upload PDF / DOCX / TXT Document])
+        UC19([Monitor OCR Ingestion Progress])
+        UC20([Query Ingested Document via RAG])
+        UC21([Manage Knowledge Base])
+    end
+
+    subgraph UC_SECURITY["SECURITY & COMPLIANCE"]
+        UC22([Authenticate via OAuth2 / SSO])
+        UC23([Manage API Key Lifecycle])
+        UC24([View Audit Logs])
+        UC25([Configure RBAC Roles])
+        UC26([Trigger PII / DLP Scan])
+    end
+
+    subgraph UC_SYSTEM["SYSTEM OPERATIONS"]
+        UC27([Auto-Poll Backend Metrics Every 30s])
+        UC28([Run Anomaly Detection Scheduler])
+        UC29([Refresh Vector Index Incrementally])
+        UC30([Execute CI/CD Deployment Pipeline])
+        UC31([Export Prometheus Metrics])
+    end
+
+    CK --> UC1 & UC2 & UC3 & UC4 & UC5
+    CK --> UC6 & UC7 & UC8 & UC9
+    CK --> UC10 & UC12
+    CK --> UC22
+
+    CM --> UC1 & UC5
+    CM --> UC6 & UC7 & UC8
+    CM --> UC10 & UC11 & UC12
+    CM --> UC14 & UC15 & UC16 & UC17
+    CM --> UC22
+
+    ER --> UC1 & UC2 & UC4
+    ER --> UC8 & UC9
+    ER --> UC11
+    ER --> UC14 & UC15 & UC16
+    ER --> UC22
+
+    ADM --> UC18 & UC19 & UC20 & UC21
+    ADM --> UC22 & UC23 & UC24 & UC25 & UC26
+    ADM --> UC9
+
+    SYS --> UC27 & UC28 & UC29 & UC30 & UC31
+```
+
+---
+
 ## 🛠️ Google Cloud & Technology Stack
 
 | Category | Technology |
