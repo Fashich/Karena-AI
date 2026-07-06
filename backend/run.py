@@ -18,5 +18,6 @@ if __name__ == "__main__":
     "karena.main:app",
     host=host,
     port=port,
-    reload=True,
+    reload=os.environ.get("ENVIRONMENT","production") == "development",
   )
+
