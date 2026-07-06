@@ -97,7 +97,8 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-        <Link to="/" className="font-display text-lg font-medium">
+        <Link to="/" className="font-display text-lg font-medium flex items-center gap-2">
+          <img src="/icons/images/KarenaAI-Logo.png" alt="" className="h-6 w-6 rounded-md" />
           KARENA AI
         </Link>
         <div className="flex gap-3">

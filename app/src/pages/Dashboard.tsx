@@ -264,7 +264,7 @@ export default function Dashboard() {
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0a0a0f]/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-screen-xl items-center justify-between px-6 py-3">
           <div className="flex items-center gap-3">
-            <Link to="/" className="font-display text-base font-semibold tracking-tight">KARENA AI</Link>
+            <Link to="/" className="font-display text-base font-semibold tracking-tight flex items-center gap-2"><img src="/icons/images/KarenaAI-Logo.png" alt="" className="h-6 w-6 rounded-md" />KARENA AI</Link>
             <span className="hidden text-white/30 sm:inline">/</span>
             <span className="hidden text-sm text-white/60 sm:inline">Decision Intelligence</span>
           </div>

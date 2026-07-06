@@ -148,7 +148,7 @@ export default function Landing() {
       <nav className="sticky top-0 z-50 border-b border-white/8 bg-[#050c18]/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-lg font-bold tracking-tight">KARENA AI</span>
+            <span className="font-mono text-lg font-bold tracking-tight flex items-center gap-2"><img src="/icons/images/KarenaAI-Logo.png" alt="" className="h-6 w-6 rounded-md" />KARENA AI</span>
             <span className="rounded-full border border-blue-500/40 bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-400">Beta</span>
           </div>
           <div className="hidden items-center gap-6 md:flex">

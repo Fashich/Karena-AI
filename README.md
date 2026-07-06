@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="app/public/icons/images/KarenaAI-Logo.png" alt="Karena AI Logo" width="120" style="border-radius: 16px; margin-bottom: 16px;" />
+
 # KARENA AI
 ### Community Decision Intelligence Platform
 

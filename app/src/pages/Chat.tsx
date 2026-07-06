@@ -363,7 +363,8 @@ export default function Chat() {
   return (
     <div className="flex h-screen flex-col bg-[#0a0a0f] text-white">
       <header className="flex items-center justify-between border-b border-white/10 px-4 py-3 gap-2 flex-wrap">
-        <Link to="/" className="font-display text-base font-medium tracking-tight shrink-0">
+        <Link to="/" className="font-display text-base font-medium tracking-tight shrink-0 flex items-center gap-2">
+          <img src="/icons/images/KarenaAI-Logo.png" alt="" className="h-6 w-6 rounded-md" />
           KARENA AI
         </Link>
 
@@ -403,7 +404,7 @@ export default function Chat() {
               : 'border-white/10 bg-white/5 text-white/40 hover:text-white/70',
           )}
         >
-          <span className="text-xs">??</span>
+          <span className="text-[10px] font-bold">WEB</span>
           {webSearch ? 'Web ON' : 'Web'}
         </button>
 
@@ -680,8 +681,5 @@ export default function Chat() {
     </div>
   );
 }
-
-
-
 
 
