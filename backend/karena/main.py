@@ -21,6 +21,9 @@ from karena.security.oidc import initialize_oidc_providers
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure data directory exists (required for SQLite on Render/cloud)
+    import os
+    os.makedirs("data", exist_ok=True)
     settings = get_settings()  # Initialize settings
     await init_db()
     vector_store = get_vector_store()
